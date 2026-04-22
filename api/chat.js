@@ -5,31 +5,44 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
-  const baseUrl = process.env.API_BASE_URL || "https://api.apiyi.com";
+  var baseUrl = process.env.API_BASE_URL || "https://api.apiyi.com";
 
   try {
-    const { system, message, tab } = req.body;
-    const response = await fetch(baseUrl + "/v1/messages", {
+    var body = req.body;
+    var messages = [];
+    if (body.system) {
+      messages.push({ role: "system", content: body.system });
+    }
+    messages.push({ role: "user", content: body.message });
+
+    var response = await fetch(baseUrl + "/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
         "Authorization": "Bearer " + apiKey,
-        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
-        system: system,
-        messages: [{ role: "user", content: message }],
+        messages: messages,
       }),
     });
-    const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data.error?.message || JSON.stringify(data) });
-    const text = data.content.filter(function(b) { return b.type === "text"; }).map(function(b) { return b.text; }).join("");
+
+    var data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: JSON.stringify(data) });
+    }
+
+    var text = "";
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      text = data.choices[0].message.content;
+    } else if (data.content) {
+      text = data.content.filter(function(b) { return b.type === "text"; }).map(function(b) { return b.text; }).join("");
+    }
+
     return res.status(200).json({ text: text });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Internal error" });
