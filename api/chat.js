@@ -8,26 +8,23 @@ module.exports = async function handler(req, res) {
   var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
-  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com";
+  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com/anthropic";
 
   try {
     var body = req.body;
-    var messages = [];
-    if (body.system) {
-      messages.push({ role: "system", content: body.system });
-    }
-    messages.push({ role: "user", content: body.message });
 
-    var response = await fetch(baseUrl + "/v1/chat/completions", {
+    var response = await fetch(baseUrl + "/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + apiKey,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "MiniMax-M2.5",
         max_tokens: 2048,
-        messages: messages,
+        system: body.system || "",
+        messages: [{ role: "user", content: body.message }],
       }),
     });
 
@@ -37,8 +34,12 @@ module.exports = async function handler(req, res) {
     }
 
     var text = "";
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      text = data.choices[0].message.content;
+    if (data.content) {
+      for (var i = 0; i < data.content.length; i++) {
+        if (data.content[i].type === "text") {
+          text += data.content[i].text;
+        }
+      }
     }
 
     return res.status(200).json({ text: text });
