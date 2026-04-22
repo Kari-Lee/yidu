@@ -1,49 +1,244 @@
-module.exports = async function handler(req, res) {
-  // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>已读 Yidu - 依恋类型分析器</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;background:#FAFAFA;color:#222;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none}
+textarea{font-family:inherit;display:block}
+textarea:focus{outline:none}
+textarea::placeholder{color:#ccc}
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+@keyframes grow{from{width:0%}}
+.fu{animation:fu .45s ease both}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var curTab="diagnose",curStep="input",curText="",curCtx="",curResult=null,loadIv=null;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "API key not configured" });
+var PROMPTS={
+diagnose:"你是「已读」，一个依恋类型分析器。用户会给你聊天记录和关系背景，你需要：\n1. 判断对方的依恋类型（avoidant/anxious/secure/disorganized）\n2. 给出置信度（0-100）\n3. 找出3句最能暴露对方类型的话，每句给出潜台词解读\n4. 总结核心互动模式\n5. 给出针对性的回消息策略\n\n你的风格：犀利、直接、不鸡汤。像一个毒舌但真心为朋友好的闺蜜。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"type\":\"avoidant或anxious或secure或disorganized\",\"label\":\"中文类型名\",\"confidence\":数字,\"emoji\":\"对应emoji\",\"desc\":\"一句话描述\",\"traits\":[\"特征1\",\"特征2\",\"特征3\"],\"signals\":[{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"},{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"},{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"}],\"pattern\":\"核心模式名称\",\"advice\":\"回消息策略，2-3句话\"}",
+translate:"你是「已读」的翻译器。用户会给你一句Ta说的话，你需要翻译这句话背后的真实意思。\n给出一个总判断，然后列出3种可能性（A/B/C），每种给出概率、含义、原因。最后判断最可能是哪个。\n风格：犀利、直接、有洞察力。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"verdict\":\"一句话总判断\",\"possibilities\":[{\"label\":\"A\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#FF6B6B\"},{\"label\":\"B\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#FCC419\"},{\"label\":\"C\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#845EF7\"}],\"most_likely\":\"A或B或C\",\"most_likely_reason\":\"为什么最可能\"}",
+check:"你是「已读」的消息检测器。用户想发一条消息给Ta，你需要判断这条消息该不该发。\n分析这条消息会不会触发对方的防御机制，预测对方收到后的反应。如果不该发，给出替代版本。\n风格：犀利、直接、实用。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"verdict\":\"别发或可以发\",\"danger\":true或false,\"trigger\":\"会触发什么（如果危险）\",\"prediction\":\"对方大概率反应\",\"alternative\":\"替代消息（如果危险）\",\"reason\":\"为什么用替代版本或为什么可以发\"}"
+};
 
-  // Use custom base URL if set (e.g. for APIYi relay), otherwise default to Anthropic
-  const baseUrl = process.env.API_BASE_URL || "https://api.anthropic.com";
+var TYPE_GRADS={avoidant:"linear-gradient(135deg,#74C0FC,#4EA8DE,#3B5BDB)",anxious:"linear-gradient(135deg,#FFA8A8,#FF6B6B,#E03131)",secure:"linear-gradient(135deg,#96F2D7,#38D9A9,#0CA678)",disorganized:"linear-gradient(135deg,#D0BFFF,#9775FA,#7048E8)"};
+var TYPE_BGS={avoidant:"#EDF2FF",anxious:"#FFF5F5",secure:"#F0FFF4",disorganized:"#F8F0FC"};
+var TAB_COLORS={diagnose:"#FF6B6B",translate:"#845EF7",check:"#20C997"};
 
-  try {
-    const { system, message, tab } = req.body;
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
-    const response = await fetch(`${baseUrl}/v1/messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: process.env.MODEL_NAME || "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        system: system,
-        messages: [{ role: "user", content: message }],
-      }),
-    });
+async function callAPI(tab,text,context){
+  var msg="";
+  if(tab==="diagnose") msg=(context?"关系背景："+context+"\n\n":"")+"聊天记录：\n"+text;
+  else if(tab==="translate") msg="Ta说的话："+text;
+  else msg="我想发的消息："+text;
 
-    const data = await response.json();
+  var resp=await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({system:PROMPTS[tab],message:msg,tab:tab})
+  });
+  var data=await resp.json();
+  if(!resp.ok) throw new Error(data.error||"请求失败");
+  var clean=data.text.replace(/```json|```/g,"").trim();
+  return JSON.parse(clean);
+}
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || "API error" });
+function buildSigRow(icon,msg,meaning,bg,isLast){
+  return '<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;'+(isLast?'':'border-bottom:1px solid #f5f5f5')+'">'
+    +'<div style="width:42px;height:42px;border-radius:12px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+icon+'</div>'
+    +'<div style="flex:1"><div style="font-size:15px;font-weight:700;color:#222;margin-bottom:4px">「'+esc(msg)+'」</div>'
+    +'<div style="font-size:13px;color:#999">→ '+esc(meaning)+'</div></div></div>';
+}
+
+function render(){
+  if(loadIv){clearInterval(loadIv);loadIv=null;}
+  var color=TAB_COLORS[curTab];
+  var h='';
+
+  // Header
+  h+='<div style="padding:48px 24px 24px;text-align:center;background:linear-gradient(180deg,#fff,#FAFAFA)">';
+  h+='<div style="display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 8px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B10,#845EF710);margin-bottom:16px">';
+  h+='<span style="font-size:14px">💬</span><span style="font-size:11px;font-weight:800;background:linear-gradient(135deg,#FF6B6B,#845EF7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px">ATTACHMENT ANALYZER</span></div>';
+  h+='<h1 style="font-size:42px;font-weight:900;color:#111;letter-spacing:3px">已读</h1>';
+  h+='<p style="font-size:14px;color:#ccc;font-weight:500;margin-top:8px">Ta不是不爱你&nbsp;&nbsp;是你们都有病</p></div>';
+
+  // Tabs
+  h+='<div style="display:flex;gap:10px;padding:0 20px 24px;justify-content:center;flex-wrap:wrap">';
+  var tids=["diagnose","translate","check"],tlabels=["确诊","翻译","发还是不发"],ticons=["🩺","🔮","💊"];
+  for(var i=0;i<3;i++){var on=curTab===tids[i];h+='<button data-action="tab" data-tab="'+tids[i]+'" style="padding:10px 18px;border-radius:999px;background:'+(on?TAB_COLORS[tids[i]]:"#fff")+';color:'+(on?"#fff":"#999")+';font-size:14px;font-weight:700;box-shadow:'+(on?"0 4px 18px "+TAB_COLORS[tids[i]]+"40":"0 1px 6px rgba(0,0,0,.05)")+';display:flex;align-items:center;gap:6px"><span style="font-size:15px">'+ticons[i]+'</span>'+tlabels[i]+'</button>';}
+  h+='</div>';
+
+  h+='<div style="padding:0 16px 40px;max-width:480px;margin:0 auto">';
+
+  if(curStep==="input"){
+    var phs={diagnose:"把聊天记录粘贴在这里...\n\n微信导出 / 直接复制 / 截图文字都行",translate:"Ta发的那句话...\n比如：到时候再说",check:"你想发给Ta的话...\n比如：你是不是不喜欢我了"};
+    var btns={diagnose:"开始确诊 🩺",translate:"翻译 🔮",check:"检测 💊"};
+    var rows=curTab==="diagnose"?10:4;
+    h+='<div class="fu"><div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+    h+='<textarea id="mainTA" rows="'+rows+'" placeholder="'+esc(phs[curTab])+'" style="width:100%;padding:12px 4px;background:transparent;border:none;color:#222;font-size:15px;line-height:1.8;resize:none;outline:none">'+esc(curText)+'</textarea></div>';
+    h+='<button data-action="submit" style="width:100%;margin-top:14px;padding:16px;border-radius:16px;font-size:16px;font-weight:700;color:#fff;background:'+(curText.trim()?color:"#E0E0E0")+';box-shadow:'+(curText.trim()?"0 6px 22px "+color+"35":"none")+';transition:all .25s">'+btns[curTab]+'</button></div>';
+  }
+  else if(curStep==="context"){
+    h+='<div class="fu"><div style="background:#fff;border-radius:24px;padding:28px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+    h+='<div style="font-size:22px;font-weight:900;color:#222;margin-bottom:6px">Ta是你的什么人？</div>';
+    h+='<div style="font-size:13px;color:#bbb;margin-bottom:20px">比如：暧昧三个月 / 同事 / Ta总是已读不回</div>';
+    h+='<textarea id="ctxTA" rows="3" placeholder="正在折磨我的人..." style="width:100%;padding:14px 4px;background:transparent;border:none;border-top:1px solid #f0f0f0;color:#222;font-size:15px;line-height:1.8;resize:none;outline:none">'+esc(curCtx)+'</textarea></div>';
+    h+='<div style="display:flex;gap:10px;margin-top:14px">';
+    h+='<button data-action="back" style="flex:1;padding:14px;background:#fff;color:#999;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 1px 6px rgba(0,0,0,.05)">返回</button>';
+    h+='<button data-action="submit" style="flex:2;padding:14px;background:#FF6B6B;color:#fff;border-radius:14px;font-size:15px;font-weight:700;box-shadow:0 6px 22px rgba(255,107,107,.3)">确诊 🩺</button>';
+    h+='</div></div>';
+  }
+  else if(curStep==="loading"){
+    var msgs=curTab==="diagnose"?["正在扫描互动模式","分析依恋信号中","Ta的防御机制正在被拆解","生成确诊报告"]:curTab==="translate"?["解码潜台词中","分析语气温度","翻译Ta的真实意图"]:["评估消息杀伤力","模拟Ta的反应","计算防御触发概率"];
+    h+='<div class="fu" style="text-align:center;padding:80px 20px">';
+    h+='<div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:999px;background:#fff;box-shadow:0 2px 20px rgba(0,0,0,.06)">';
+    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease 0s infinite"></span>';
+    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease .15s infinite"></span>';
+    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease .3s infinite"></span>';
+    h+='<span id="loadTxt" style="font-size:13px;color:#666;font-weight:500">'+msgs[0]+'</span>';
+    h+='</div></div>';
+    var n=0;loadIv=setInterval(function(){n++;var el=document.getElementById("loadTxt");if(el)el.textContent=msgs[n%msgs.length];},1200);
+  }
+  else if(curStep==="error"){
+    h+='<div class="fu" style="text-align:center;padding:60px 20px">';
+    h+='<div style="font-size:40px;margin-bottom:16px">😵</div>';
+    h+='<div style="font-size:15px;color:#E03131;font-weight:600;margin-bottom:8px">分析出错了</div>';
+    h+='<div style="font-size:13px;color:#999;margin-bottom:24px">'+(curResult||"未知错误")+'</div>';
+    h+='<button data-action="reset" style="padding:12px 32px;background:#FF6B6B;color:#fff;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(255,107,107,.3)">重试</button>';
+    h+='</div>';
+  }
+  else if(curStep==="result"&&curResult){
+    h+='<div class="fu">';
+    if(curTab==="diagnose"){
+      var d=curResult,g=TYPE_GRADS[d.type]||TYPE_GRADS.avoidant,bg=TYPE_BGS[d.type]||TYPE_BGS.avoidant;
+      h+='<div style="background:'+g+';border-radius:24px;padding:40px 28px 36px;color:#fff;text-align:center;position:relative;overflow:hidden">';
+      h+='<div style="position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.1)"></div>';
+      h+='<div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)"></div>';
+      h+='<div style="font-size:60px;margin-bottom:10px;position:relative">'+(d.emoji||"🧊")+'</div>';
+      h+='<div style="font-size:11px;letter-spacing:5px;opacity:.75;margin-bottom:10px;font-weight:700;position:relative">确诊报告</div>';
+      h+='<div style="font-size:40px;font-weight:900;text-shadow:0 2px 16px rgba(0,0,0,.12);margin-bottom:6px;position:relative">'+esc(d.label)+'</div>';
+      h+='<div style="font-size:15px;opacity:.85;position:relative">'+esc(d.desc)+'</div></div>';
+      h+='<div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">';
+      (d.traits||[]).forEach(function(t){h+='<span style="padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;background:'+bg+';color:#555">#'+esc(t)+'</span>';});
+      h+='</div>';
+      h+='<div style="margin-top:16px;padding:22px 24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#aaa;font-weight:700;letter-spacing:1px">置信度</span>';
+      h+='<span style="font-size:28px;font-weight:900;background:'+g+';-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+d.confidence+'%</span></div>';
+      h+='<div style="height:8px;background:#f2f2f2;border-radius:99px;overflow:hidden;margin-top:12px"><div style="height:100%;width:'+d.confidence+'%;background:'+g+';border-radius:99px;animation:grow 1.2s ease"></div></div>';
+      h+='<div style="font-size:12px;color:#ccc;margin-top:8px;text-align:right">剩下'+(100-d.confidence)+'%是给你留的希望</div></div>';
+      h+='<div style="margin-top:12px;padding:20px 24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04);display:flex;align-items:center;gap:16px">';
+      h+='<div style="width:48px;height:48px;border-radius:14px;background:'+g+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎯</div>';
+      h+='<div><div style="font-size:12px;color:#aaa;font-weight:700;margin-bottom:3px">核心模式</div><div style="font-size:18px;font-weight:800;color:#222">'+esc(d.pattern)+'</div></div></div>';
+      h+='<div style="margin-top:12px;padding:24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+      h+='<div style="font-size:13px;color:#aaa;font-weight:700;letter-spacing:1px;margin-bottom:16px">Ta出卖自己的三句话</div>';
+      (d.signals||[]).forEach(function(s,i){h+=buildSigRow(s.icon||"💬",s.msg,s.meaning,bg,i===2);});
+      h+='</div>';
+      h+='<div style="margin-top:12px;padding:22px 24px;background:'+bg+';border-radius:20px">';
+      h+='<div style="font-size:13px;font-weight:800;color:#555;margin-bottom:10px">💡 回消息策略</div>';
+      h+='<div style="font-size:15px;line-height:1.9;color:#333;font-weight:500">'+esc(d.advice)+'</div></div>';
+      h+='<div style="margin-top:20px;text-align:center"><span style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B11,#845EF711);font-size:13px;color:#aaa;font-weight:500">📱 截图发给闺蜜 · Ta大概率也需要</span></div>';
     }
+    else if(curTab==="translate"){
+      var r=curResult;
+      h+='<div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+      h+='<div style="padding:16px 20px;background:#F8F0FC;border-radius:14px;margin-bottom:20px;border-left:4px solid #845EF7">';
+      h+='<div style="font-size:11px;color:#bbb;font-weight:700;margin-bottom:4px;letter-spacing:1px">Ta说</div>';
+      h+='<div style="font-size:18px;font-weight:800;color:#222">「'+esc(curText)+'」</div></div>';
+      h+='<div style="text-align:center;padding:16px 0 20px;margin-bottom:20px;border-bottom:1px solid #f0f0f0">';
+      h+='<div style="font-size:11px;color:#bbb;margin-bottom:6px;font-weight:700;letter-spacing:1px">翻译结果</div>';
+      h+='<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FF6B6B,#845EF7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+esc(r.verdict)+'</div></div>';
+      (r.possibilities||[]).forEach(function(p,i){
+        h+='<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;'+(i<2?"border-bottom:1px solid #f5f5f5;":"")+'opacity:'+(i===0?1:.6)+'">';
+        h+='<div style="width:38px;height:38px;border-radius:10px;background:'+p.color+'18;color:'+p.color+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">'+p.label+'</div>';
+        h+='<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">';
+        h+='<span style="font-size:14px;font-weight:700;color:#222">'+esc(p.meaning)+'</span>';
+        h+='<span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:'+p.color+'18;color:'+p.color+'">'+p.percent+'%</span></div>';
+        h+='<div style="font-size:12px;color:#aaa">'+esc(p.reason)+'</div></div></div>';
+      });
+      h+='</div>';
+      h+='<div style="margin-top:14px;padding:18px 22px;background:#FFF5F5;border-radius:16px;display:flex;align-items:center;gap:12px">';
+      h+='<span style="font-size:22px">🎯</span><div><div style="font-size:13px;font-weight:800;color:#FF6B6B;margin-bottom:2px">最可能的是 '+esc(r.most_likely||"A")+'</div>';
+      h+='<div style="font-size:12px;color:#999">'+esc(r.most_likely_reason||"")+'</div></div></div>';
+    }
+    else{
+      var r=curResult,dc=r.danger?"#FF6B6B":"#20C997";
+      h+='<div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
+      h+='<div style="padding:16px 20px;background:#F8F9FA;border-radius:14px;margin-bottom:24px;border-left:4px solid '+dc+'">';
+      h+='<div style="font-size:11px;color:#bbb;font-weight:700;margin-bottom:4px;letter-spacing:1px">你想发</div>';
+      h+='<div style="font-size:16px;font-weight:700;color:#222">「'+esc(curText)+'」</div></div>';
+      h+='<div style="text-align:center;padding:36px 20px 32px;margin-bottom:24px;border-radius:20px;background:'+(r.danger?"linear-gradient(135deg,#FFF5F5,#FFE3E3)":"linear-gradient(135deg,#F0FFF4,#D3F9D8)")+'">';
+      h+='<div style="font-size:52px;margin-bottom:10px">'+(r.danger?"🚨":"✅")+'</div>';
+      h+='<div style="font-size:40px;font-weight:900;color:'+(r.danger?"#E03131":"#0CA678")+'">'+esc(r.verdict)+'</div></div>';
+      if(r.danger){
+        h+='<div style="display:flex;gap:10px;margin-bottom:16px">';
+        h+='<div style="flex:1;padding:16px;background:#FFF5F5;border-radius:14px"><div style="font-size:11px;color:#ccc;font-weight:700;margin-bottom:6px">会触发</div><div style="font-size:14px;font-weight:800;color:#FF6B6B">'+esc(r.trigger||"")+'</div></div>';
+        h+='<div style="flex:1;padding:16px;background:#F8F9FA;border-radius:14px"><div style="font-size:11px;color:#ccc;font-weight:700;margin-bottom:6px">Ta大概率会</div><div style="font-size:13px;font-weight:500;color:#555">'+esc(r.prediction||"")+'</div></div></div>';
+        h+='<div style="padding:22px;border-radius:16px;background:linear-gradient(135deg,#F0FFF4,#E6FCF5);border:2px solid #C3FAE8">';
+        h+='<div style="font-size:12px;font-weight:800;color:#0CA678;margin-bottom:10px">✨ 替代版本</div>';
+        h+='<div style="font-size:17px;font-weight:800;color:#222;margin-bottom:8px">「'+esc(r.alternative||"")+'」</div>';
+        h+='<div style="font-size:12px;color:#888">→ '+esc(r.reason||"")+'</div></div>';
+      }else{
+        h+='<div style="padding:20px;border-radius:16px;background:#F0FFF4"><div style="font-size:14px;color:#333;font-weight:500">'+esc(r.reason||"")+'</div></div>';
+      }
+      h+='</div>';
+    }
+    h+='<button data-action="reset" style="width:100%;margin-top:20px;padding:16px;background:#fff;color:#999;border-radius:16px;font-size:14px;font-weight:600;box-shadow:0 1px 8px rgba(0,0,0,.04)">再来一次 ↻</button>';
+    h+='</div>';
+  }
 
-    // Extract text content
-    const text = data.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+  h+='</div>';
+  h+='<div style="text-align:center;padding:32px 20px 52px"><div style="font-size:12px;color:#ddd;font-weight:500">已读 · Yidu</div><div style="font-size:11px;color:#e8e8e8;margin-top:4px">不治病，就确诊，其他的你自己决定</div></div>';
 
-    return res.status(200).json({ text });
-  } catch (err) {
-    return res.status(500).json({ error: err.message || "Internal error" });
+  document.getElementById("app").innerHTML=h;
+
+  if(curStep==="input"){
+    var ta=document.getElementById("mainTA");
+    if(ta) ta.addEventListener("input",function(){curText=this.value;var btn=document.querySelector('[data-action="submit"]');if(btn){btn.style.background=curText.trim()?color:"#E0E0E0";btn.style.boxShadow=curText.trim()?"0 6px 22px "+color+"35":"none";}});
+  }
+  if(curStep==="context"){
+    var ta2=document.getElementById("ctxTA");
+    if(ta2) ta2.addEventListener("input",function(){curCtx=this.value;});
   }
 }
+
+document.getElementById("app").addEventListener("click",function(e){
+  var target=e.target;
+  while(target&&target!==this){
+    var action=target.getAttribute("data-action");
+    if(action){
+      if(action==="tab"){
+        curTab=target.getAttribute("data-tab");curStep="input";curText="";curCtx="";curResult=null;render();
+      }else if(action==="submit"){
+        var ta=document.getElementById("mainTA");if(ta)curText=ta.value;
+        var ta2=document.getElementById("ctxTA");if(ta2)curCtx=ta2.value;
+        if(!curText.trim())return;
+        if(curTab==="diagnose"&&curStep==="input"){curStep="context";render();return;}
+        curStep="loading";render();
+        callAPI(curTab,curText,curCtx).then(function(res){
+          curResult=res;curStep="result";render();
+        }).catch(function(err){
+          curResult=err.message||"请求失败";curStep="error";render();
+        });
+      }else if(action==="back"){
+        curStep="input";render();
+      }else if(action==="reset"){
+        curText="";curCtx="";curResult=null;curStep="input";render();
+      }
+      return;
+    }
+    target=target.parentElement;
+  }
+});
+
+render();
+</script>
+</body>
+</html>
