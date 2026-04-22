@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
-  var baseUrl = process.env.API_BASE_URL || "https://api.apiyi.com";
+  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com";
 
   try {
     var body = req.body;
@@ -25,8 +25,8 @@ module.exports = async function handler(req, res) {
         "Authorization": "Bearer " + apiKey,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
+        model: "MiniMax-M2.5",
+        max_tokens: 2048,
         messages: messages,
       }),
     });
@@ -39,8 +39,6 @@ module.exports = async function handler(req, res) {
     var text = "";
     if (data.choices && data.choices[0] && data.choices[0].message) {
       text = data.choices[0].message.content;
-    } else if (data.content) {
-      text = data.content.filter(function(b) { return b.type === "text"; }).map(function(b) { return b.text; }).join("");
     }
 
     return res.status(200).json({ text: text });
