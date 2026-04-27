@@ -3,242 +3,572 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>已读 Yidu - 依恋类型分析器</title>
+<title>已读 Yidu</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;background:#FAFAFA;color:#222;min-height:100vh}
+body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#FBF7F0;color:#2D2A32;min-height:100vh}
+.sf{font-family:'Playfair Display',Georgia,serif}
 button{font-family:inherit;cursor:pointer;border:none}
 textarea{font-family:inherit;display:block}
 textarea:focus{outline:none}
-textarea::placeholder{color:#ccc}
-@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+textarea::placeholder{color:#C5C0CB}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
-@keyframes grow{from{width:0%}}
-.fu{animation:fu .45s ease both}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(139,58,98,.1)}50%{box-shadow:0 0 40px rgba(139,58,98,.2)}}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
-<div id="app"></div>
-<script>
-var curTab="diagnose",curStep="input",curText="",curCtx="",curResult=null,loadIv=null;
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
 
-var PROMPTS={
-diagnose:"你是「已读」，一个依恋类型分析器。用户会给你聊天记录和关系背景，你需要：\n1. 判断对方的依恋类型（avoidant/anxious/secure/disorganized）\n2. 给出置信度（0-100）\n3. 找出3句最能暴露对方类型的话，每句给出潜台词解读\n4. 总结核心互动模式\n5. 给出针对性的回消息策略\n\n你的风格：犀利、直接、不鸡汤。像一个毒舌但真心为朋友好的闺蜜。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"type\":\"avoidant或anxious或secure或disorganized\",\"label\":\"中文类型名\",\"confidence\":数字,\"emoji\":\"对应emoji\",\"desc\":\"一句话描述\",\"traits\":[\"特征1\",\"特征2\",\"特征3\"],\"signals\":[{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"},{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"},{\"msg\":\"原话\",\"meaning\":\"潜台词\",\"icon\":\"emoji\"}],\"pattern\":\"核心模式名称\",\"advice\":\"回消息策略，2-3句话\"}",
-translate:"你是「已读」的翻译器。用户会给你一句Ta说的话，你需要翻译这句话背后的真实意思。\n给出一个总判断，然后列出3种可能性（A/B/C），每种给出概率、含义、原因。最后判断最可能是哪个。\n风格：犀利、直接、有洞察力。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"verdict\":\"一句话总判断\",\"possibilities\":[{\"label\":\"A\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#FF6B6B\"},{\"label\":\"B\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#FCC419\"},{\"label\":\"C\",\"percent\":数字,\"meaning\":\"含义\",\"reason\":\"原因\",\"color\":\"#845EF7\"}],\"most_likely\":\"A或B或C\",\"most_likely_reason\":\"为什么最可能\"}",
-check:"你是「已读」的消息检测器。用户想发一条消息给Ta，你需要判断这条消息该不该发。\n分析这条消息会不会触发对方的防御机制，预测对方收到后的反应。如果不该发，给出替代版本。\n风格：犀利、直接、实用。\n\n严格按以下JSON格式回复，不要输出任何其他内容：\n{\"verdict\":\"别发或可以发\",\"danger\":true或false,\"trigger\":\"会触发什么（如果危险）\",\"prediction\":\"对方大概率反应\",\"alternative\":\"替代消息（如果危险）\",\"reason\":\"为什么用替代版本或为什么可以发\"}"
+/* ═══ DESIGN SYSTEM ═══ */
+const C = { bg: "#FBF7F0", card: "#FFFFFF", wine: "#8B3A62", gold: "#C49B6A", plum: "#7B6BA8", sage: "#6B9080", rose: "#D4847C", ink: "#2D2A32", sub: "#8E8A93", muted: "#C5C0CB", line: "#EDE8E0", warm: "#F5EFE6" };
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:${C.bg}}
+@keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(139,58,98,.1)}50%{box-shadow:0 0 40px rgba(139,58,98,.2)}}
+textarea:focus{outline:none}textarea::placeholder{color:${C.muted}}
+.fu{animation:fu .5s ease both}
+.serif{font-family:'Playfair Display',Georgia,serif}
+.sans{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif}
+`;
+
+/* ═══ DATA ═══ */
+const QUOTES = [
+  "Ta说「我需要空间」的意思是：你不在的空间",
+  "已读不回不是忙，是忙着不想回你",
+  "「你想多了」= 你想对了但我不想承认",
+  "安全型的人不刷这个App",
+  "混乱型：上午说分手，下午问你晚上吃什么",
+  "焦虑型+回避型=一场精心编排的互相折磨",
+  "你删了又加的不是Ta，是你的自尊",
+  "「到时候再说」翻译：永远不会到那个时候",
+];
+const DAILY = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+
+const QUIZ = [
+  { q: "Ta没回消息过了2小时，你会？", a: ["反复看手机越来越焦虑", "告诉自己Ta在忙但心里不舒服", "该干嘛干嘛等Ta回", "先生气然后又担心Ta出事了"] },
+  { q: "吵架之后你通常会？", a: ["立刻想和好受不了冷战", "假装没事其实很难受", "冷静下来再沟通", "一会想分手一会想道歉"] },
+  { q: "Ta突然对你特别温柔，你的第一反应？", a: ["开心但立刻想Ta是不是做了对不起我的事", "有点不自在想退后一步", "享受当下觉得很幸福", "感动但又觉得这不会持久的"] },
+  { q: "关于说「我爱你」这件事：", a: ["经常说也需要经常听到", "想说但怕对方觉得太重", "在合适时候自然地说", "说不出口觉得说了就输了"] },
+  { q: "当Ta跟你分享工作上的烦恼时，你会？", a: ["全心投入帮Ta分析希望Ta也这样对我", "听着但不太知道怎么回应", "认真倾听然后给建议或安慰", "很想帮忙但又怕说错话让关系变糟"] },
+  { q: "你觉得亲密关系中最重要的是？", a: ["确定感——知道Ta爱我", "独立——各自有空间", "信任——彼此坦诚", "说不清——有时想靠近有时想逃"] },
+  { q: "和Ta在一起时你经常会想：", a: ["Ta是不是真的喜欢我", "我们是不是待在一起太久了", "我很享受和Ta在一起的时光", "我到底想不想和这个人在一起"] },
+  { q: "Ta说「我想一个人待一会」你会？", a: ["觉得被抛弃很受伤", "松一口气终于有自己的时间", "尊重但约好之后再聊", "嘴上说好心里揣测Ta不满"] },
+  { q: "表达需求时你通常？", a: ["旁敲侧击希望Ta主动察觉", "很少表达怕被拒绝", "直接说出来", "想说但一开口就变成抱怨"] },
+  { q: "关系中遇到矛盾你的本能反应是？", a: ["紧紧抓住不放必须现在解决", "先回避等情绪过去再说", "面对问题找到双方都接受的方案", "又想解决又想逃跑最后什么都没做"] },
+  { q: "Ta和异性朋友单独吃饭你的反应？", a: ["很不安需要Ta报备细节", "有点介意但不想表现出来", "相信Ta没什么大不了", "表面说没事其实暗暗生闷气然后又觉得自己反应过度"] },
+  { q: "Ta出差一周，你会？", a: ["每天要视频通话不然睡不着", "反而觉得轻松自在", "想Ta但也享受独处的时间", "前两天很想Ta后面突然觉得一个人也挺好甚至有点不想Ta回来"] },
+  { q: "关于肢体接触你的态度是？", a: ["非常需要经常想牵手拥抱", "能接受但有时觉得过于亲密不自在", "自然地表达和接受", "有时特别渴望有时又觉得被侵犯了空间"] },
+  { q: "你对「依赖」这个词的感觉是？", a: ["很正常相爱的人就应该互相依赖", "有点恐惧不想依赖任何人", "适度的依赖是健康的", "既渴望依赖又害怕依赖"] },
+  { q: "关系中你最怕的是？", a: ["被抛弃被替代", "失去自我和自由", "不被理解不被尊重", "什么都怕又什么都想要"] },
+  { q: "回顾过去的感情你觉得自己？", a: ["总是付出更多更在乎的那个", "总是先想离开的那个", "双方比较平等", "每段都不一样很混乱有时付出有时逃避"] },
+  { q: "当Ta做了让你失望的事你会？", a: ["很受伤但不舍得离开反复纠结", "在心里默默记一笔慢慢关上心门", "表达失望讨论怎么改善", "大吵一架然后又后悔然后又想吵"] },
+  { q: "你理想中的关系距离是？", a: ["黏在一起每件事都分享", "各自独立有各自的生活圈", "亲密但有边界", "忽远忽近说不准今天想黏明天想逃"] },
+  { q: "Ta夸你「你今天好好看」你会？", a: ["开心但马上想那平时呢", "有点不好意思想转移话题", "谢谢开心地接受", "先开心然后怀疑Ta是不是有事求我"] },
+  { q: "如果用一句话形容你在感情中的样子：", a: ["我在门口等你回来的灯", "我是你走不进来的城堡", "我是和你一起晒太阳的猫", "我是一会开门一会关门的风"] },
+];
+const TMAP = ["anxious", "avoidant", "secure", "disorganized"];
+const TI = {
+  anxious: { label: "焦虑型", emoji: "🔥", color: C.rose, grad: "linear-gradient(135deg,#E8A0BF,#D4847C,#C4616C)", bg: "#FFF5F3", desc: "你爱得太用力了", traits: ["需要反复确认","害怕被抛弃","对冷淡极度敏感"], detail: "你像一个24小时待命的消防员，随时准备扑灭「Ta不爱我了」的火。", advice: "下次想发第三条消息追问的时候，先放下手机，深呼吸。" },
+  avoidant: { label: "回避型", emoji: "🧊", color: "#5B8FB9", grad: "linear-gradient(135deg,#8ECAE6,#5B8FB9,#3A6D8C)", bg: "#F0F6FA", desc: "你爱的方式是后退", traits: ["需要大量空间","情感表达困难","一亲近就想逃"], detail: "你有一个隐形的盾牌，一旦有人靠得太近就会本能地往后退。", advice: "下次想说「我没事」的时候，试着改成「我需要一点时间，但我不是在疏远你」。" },
+  secure: { label: "安全型", emoji: "🌿", color: C.sage, grad: "linear-gradient(135deg,#A7C4BC,#6B9080,#4A7C6F)", bg: "#F0F7F4", desc: "恭喜你，情感模范生", traits: ["情绪稳定","能直接表达需求","不怕冲突"], detail: "你是亲密关系里的稀有物种。你能表达爱也能接受爱。", advice: "继续保持。你的存在本身就是对焦虑型和回避型的治愈。" },
+  disorganized: { label: "混乱型", emoji: "🌀", color: C.plum, grad: "linear-gradient(135deg,#C4B1DB,#7B6BA8,#5C4D8A)", bg: "#F5F0FA", desc: "连你自己都不知道你要什么", traits: ["又想靠近又想逃","情绪大起大落","又渴望又恐惧"], detail: "你的内心住着两个人：一个疯狂想要爱，另一个拼命想逃跑。", advice: "你的矛盾不是性格缺陷，是过去的关系留下的印记。" },
 };
 
-var TYPE_GRADS={avoidant:"linear-gradient(135deg,#74C0FC,#4EA8DE,#3B5BDB)",anxious:"linear-gradient(135deg,#FFA8A8,#FF6B6B,#E03131)",secure:"linear-gradient(135deg,#96F2D7,#38D9A9,#0CA678)",disorganized:"linear-gradient(135deg,#D0BFFF,#9775FA,#7048E8)"};
-var TYPE_BGS={avoidant:"#EDF2FF",anxious:"#FFF5F5",secure:"#F0FFF4",disorganized:"#F8F0FC"};
-var TAB_COLORS={diagnose:"#FF6B6B",translate:"#845EF7",check:"#20C997"};
+/* ═══ TAROT ═══ */
+const TAROT = [
+  { name:"愚者", num:"0", icon:"🃏", element:"风", up:"新的开始正在到来，放下过去的包袱，带着好奇心迎接这段关系的下一个篇章。宇宙正在为你清理道路，你需要做的只是迈出那一步。", rev:"你在逃避面对关系中的现实问题，盲目乐观可能让你错过重要的信号。停下来问自己：你是在勇敢地前进，还是在不负责任地逃避？", love:"感情中需要冒险精神，但不是赌博。", energy:"轻盈、自由、充满可能性", action:"做一件你一直想做但不敢做的事", timing:"新月前后能量最强" },
+  { name:"魔术师", num:"I", icon:"✨", element:"水星", up:"你有能力创造你想要的关系。主动沟通和表达会带来意想不到的转机。所有的工具都已经在你手中了，关键是你敢不敢用。", rev:"小心操控和不真诚。你或Ta可能在这段关系中耍了一些小心机。语言可以是桥梁，也可以是武器——你选哪一个？", love:"表达是最被低估的恋爱技能。", energy:"创造力旺盛、掌控感强", action:"今天就把你想说但一直没说的话说出来", timing:"水星顺行时沟通更顺畅" },
+  { name:"女祭司", num:"II", icon:"🌙", element:"月亮", up:"相信你的直觉。你内心深处已经知道答案了，只是还不愿意承认。安静下来，聆听内心那个微弱但坚定的声音。", rev:"你在忽略内心的声音，被表面的甜言蜜语蒙蔽了双眼。你的身体已经在告诉你真相了——那些胃痛、失眠、莫名的不安，都是信号。", love:"最了解你感情状况的人，其实是你自己。", energy:"神秘、内省、直觉敏锐", action:"睡前写下3个关于这段感情的直觉，不要审判它们", timing:"满月时直觉最准" },
+  { name:"皇后", num:"III", icon:"🌹", element:"金星", up:"这段感情正在孕育美好的东西。给彼此更多的温柔和耐心。爱是需要浇灌的花园，不是自动售货机——投入不会立刻有回报，但一定会开花。", rev:"你在这段关系中过度付出，忽视了自己的需求。你以为的无私，其实是另一种形式的控制。先把爱给自己。", love:"健康的爱是溢出来的，不是挤出来的。", energy:"丰盛、温柔、滋养", action:"今天为自己做一件纯粹让自己开心的事", timing:"金星入相位时感情升温" },
+  { name:"皇帝", num:"IV", icon:"👑", element:"白羊座", up:"是时候在关系中建立健康的边界了。稳定和安全感正在建立中。结构不是束缚，是让爱有地方安全生长的容器。", rev:"控制欲太强。不管是你还是Ta，过度掌控正在窒息这段关系。爱情不是你的公司，不需要KPI和绩效考核。", love:"安全感不是靠控制得到的，是靠信任建立的。", energy:"权威、稳固、但可能僵硬", action:"列出你在这段关系中不可妥协的底线", timing:"土星相关时期适合建立规则" },
+  { name:"恋人", num:"VI", icon:"💕", element:"双子座", up:"这是一个重要的选择时刻。跟随你的心，但也要用头脑。真正的爱情不需要你放弃自我，而是让你成为更好的自己。", rev:"你们之间存在价值观的根本分歧，不要因为害怕孤独而将就。将就不是妥协，是慢性自杀。", love:"选择一个人就是选择一种生活方式。", energy:"抉择、融合、深层连接", action:"问自己：五年后你还想和这个人在一起吗？", timing:"金星与木星合相时做重大感情决定" },
+  { name:"战车", num:"VII", icon:"⚔️", element:"巨蟹座", up:"只要你们方向一致，没有什么能阻挡这段感情前进。胜利在望。你已经度过了最难的部分，现在需要的是坚持。", rev:"你们在往不同的方向努力，内耗正在消耗这段关系的能量。两匹马如果不朝同一个方向跑，车只会被撕裂。", love:"爱情需要共同的方向，不只是共同的回忆。", energy:"前进、征服、意志力", action:"和Ta聊一次你们各自想要的未来", timing:"火星入相位时行动力最强" },
+  { name:"力量", num:"VIII", icon:"🦁", element:"狮子座", up:"用温柔而非强硬来面对关系中的挑战。真正的力量是接纳和包容。驯服内心的野兽不靠铁链，靠的是理解和爱。", rev:"你在压抑自己的真实感受。不表达不代表没有需求。愤怒和悲伤不会因为你假装看不见就消失，它们只会换一种方式爆发。", love:"脆弱不是软弱，敢于示弱才是真正的勇敢。", energy:"内在力量、耐心、温柔的坚定", action:"允许自己在Ta面前展示一次真实的脆弱", timing:"狮子座季节时内在力量觉醒" },
+  { name:"隐者", num:"IX", icon:"🏔", element:"处女座", up:"给自己一些独处的时间来想清楚。答案在内心，不在Ta的回复里。你不需要别人的验证来确认自己的感受。", rev:"你把独处变成了逃避。孤独不是解决关系问题的方式。你是在寻找自己，还是在躲避亲密？", love:"最好的恋爱状态是：我可以没有你，但我选择和你在一起。", energy:"内省、智慧、独立", action:"关掉手机一个小时，和自己好好待一会", timing:"水星逆行期间适合反思" },
+  { name:"命运之轮", num:"X", icon:"🎡", element:"木星", up:"变化即将到来。这段关系正在进入一个新的周期，保持开放的心态。命运的齿轮已经开始转动，你只需要做好准备。", rev:"你在抗拒必然的变化。有些事情不是你能控制的，学会放手。紧握沙子只会让它流失得更快。", love:"没有一段感情是永远不变的，但变化不等于消亡。", energy:"转折、机遇、不可预测", action:"列出这段关系中你无法控制的三件事，练习放下", timing:"木星换座时大转折来临" },
+  { name:"正义", num:"XI", icon:"⚖️", element:"天秤座", up:"因果分明。你在这段关系中付出的真心，会以某种形式回到你身边。但也要准备好面对真相——正义不总是你想要的答案。", rev:"这段关系中存在不公平。是时候认真审视你们之间的付出与回报了。爱情不是交易，但也不应该是单方面的牺牲。", love:"公平不是五五分，是双方都觉得值。", energy:"平衡、真相、因果", action:"诚实地评估：在这段关系里你快乐的时间多还是痛苦的时间多？", timing:"天秤座季节适合做感情决策" },
+  { name:"月亮", num:"XVIII", icon:"🌑", element:"双鱼座", up:"不是所有的不确定都是坏事。在迷雾中保持耐心，真相即将浮现。月光虽然微弱，但足以照亮前方的路。", rev:"你在自欺欺人。Ta给你的不安全感不是你想多了，是真实存在的。你的恐惧不是空穴来风——但也不要让恐惧替你做决定。", love:"真正的安全感来自内心，不是来自Ta的保证。", energy:"幻觉、恐惧、潜意识", action:"把你最深的恐惧写下来，然后问自己：这是事实还是想象？", timing:"月食前后真相浮出水面" },
+  { name:"星星", num:"XVII", icon:"⭐", element:"水瓶座", up:"希望就在前方。经历了风雨之后，这段关系正在走向治愈和重建。伤口在愈合，虽然会留下疤痕，但疤痕是你勇敢过的证据。", rev:"你对这段感情的期待不切实际。美好的爱情需要建立在真实的基础上，而不是你幻想中的完美剧本。", love:"治愈不是忘记，是带着伤痕继续相信爱。", energy:"希望、治愈、灵感", action:"给自己写一封信，感谢自己在这段感情中的坚持", timing:"水瓶座新月时种下希望的种子" },
+  { name:"太阳", num:"XIX", icon:"☀️", element:"太阳", up:"快乐和温暖正在涌入你们的关系。享受当下，这是最好的时光。阳光下没有秘密，也没有恐惧——这就是爱情最好的样子。", rev:"你们之间的快乐可能只是表面的。看看阳光照不到的角落里藏着什么。虚假的快乐比真实的痛苦更危险。", love:"真正的幸福不怕被审视。", energy:"光明、喜悦、真实", action:"和Ta分享一件你从未告诉任何人的事", timing:"太阳回归日（生日前后）能量最强" },
+  { name:"世界", num:"XXI", icon:"🌍", element:"土星", up:"一个阶段的圆满完成。你们的关系已经成熟到了一个新的层次。你不需要再证明什么，你已经足够好了。", rev:"你在一段已经结束的关系里原地打转。是时候翻篇了。完结不是失败，是为下一个更好的开始腾出空间。", love:"有些人是来教会你爱的，不是来陪你一辈子的。", energy:"完成、整合、新循环的起点", action:"如果这段关系明天就结束，你最想说的一句话是什么？", timing:"土星回归时关系经历大考验" },
+];
 
-function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+var SYNTH = [
+  "过去的经历正在深刻影响你现在的选择。你以为你已经放下了，但牌面显示那些旧伤口还在暗中指引你的行为模式。",
+  "三张牌之间存在明显的能量递进。你正在从一个旧的关系模式中觉醒，但蜕变的过程不会舒适。",
+  "过去和未来的牌形成了对照。你内心最深处知道自己想要什么，但恐惧让你不断重复旧的模式。",
+  "现在这张牌是关键转折点。你正站在十字路口，接下来的选择将决定未来三个月的走向。",
+  "这组牌暗示着一个循环即将被打破。你在这段关系中学到的功课已经接近完成，不管结果如何。",
+  "三张牌的能量都指向内在——这不是关于Ta怎么做的问题，而是关于你如何面对自己的问题。",
+  "牌面显示外在的变化即将到来，但真正的转变需要从你的内心开始。宇宙已经准备好了，你呢？",
+  "过去的伤痛和未来的希望在现在交汇。这一刻你做的每一个选择，都在重新书写结局。",
+];
 
-async function callAPI(tab,text,context){
-  var msg="";
-  if(tab==="diagnose") msg=(context?"关系背景："+context+"\n\n":"")+"聊天记录：\n"+text;
-  else if(tab==="translate") msg="Ta说的话："+text;
-  else msg="我想发的消息："+text;
-
-  var resp=await fetch("/api/chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({system:PROMPTS[tab],message:msg,tab:tab})
+function drawCards() {
+  var shuffled = [...TAROT].sort(function() { return Math.random() - 0.5; });
+  return [0, 1, 2].map(function(i) {
+    return { ...shuffled[i], reversed: Math.random() > 0.6, pos: ["过去", "现在", "未来"][i], posDesc: ["影响你现在的根源", "你当前的状态与能量", "即将到来的趋势"][i] };
   });
-  var data=await resp.json();
-  if(!resp.ok) throw new Error(data.error||"请求失败");
-  var clean=data.text.replace(/```json|```/g,"").trim();
-  return JSON.parse(clean);
 }
 
-function buildSigRow(icon,msg,meaning,bg,isLast){
-  return '<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;'+(isLast?'':'border-bottom:1px solid #f5f5f5')+'">'
-    +'<div style="width:42px;height:42px;border-radius:12px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+icon+'</div>'
-    +'<div style="flex:1"><div style="font-size:15px;font-weight:700;color:#222;margin-bottom:4px">「'+esc(msg)+'」</div>'
-    +'<div style="font-size:13px;color:#999">→ '+esc(meaning)+'</div></div></div>';
+function getSynthesis() { return SYNTH[Math.floor(Math.random() * SYNTH.length)]; }
+
+/* ═══ PROMPTS ═══ */
+const P = {
+  diagnose: `你是「已读」依恋类型分析器。分别分析双方的依恋类型。风格犀利直接不鸡汤。严格按JSON回复：{"user_type":"anxious或avoidant或secure或disorganized","user_label":"中文类型名","partner_type":"同上","partner_label":"中文类型名","confidence":数字,"match":"互动模式2-3句","signals":[{"msg":"原话","who":"对方或用户","meaning":"潜台词","icon":"emoji"},{"msg":"","who":"","meaning":"","icon":""},{"msg":"","who":"","meaning":"","icon":""}],"user_advice":"给用户","partner_advice":"应对Ta"}`,
+  translate: `你是「已读」翻译器。翻译Ta说的话背后真实意思。严格按JSON回复：{"translations":[{"original":"原话","verdict":"判断","possibilities":[{"label":"A","percent":数字,"meaning":"含义","reason":"原因"},{"label":"B","percent":数字,"meaning":"","reason":""},{"label":"C","percent":数字,"meaning":"","reason":""}],"most_likely":"A或B或C","why":"原因"}]}`,
+  check: `你是「已读」消息检测器。根据对方依恋类型分析消息该不该发。严格按JSON回复：{"verdict":"别发或可以发","danger":true或false,"trigger":"触发什么","prediction":"对方反应","alternative":"替代消息","reason":"原因","type_note":"针对类型分析"}`,
+  predict: `你是「已读」感情预测器。根据聊天记录预测走向。严格按JSON回复：{"stage":"当前阶段","stage_desc":"描述","predictions":[{"time":"1周后","scene":"预测","prob":数字,"emoji":"emoji"},{"time":"1个月后","scene":"","prob":0,"emoji":""},{"time":"3个月后","scene":"","prob":0,"emoji":""}],"turning":"转折点","best":"最好","worst":"最差","todo":"该做的一件事"}`,
+};
+
+async function callAI(sys, content) {
+  var r = await fetch("/api/chat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system: sys, message: typeof content === "string" ? content : content.filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("") }),
+  });
+  var d = await r.json();
+  var raw = d.text;
+  return JSON.parse(raw.replace(/```json|```/g,"").trim());
 }
 
-function render(){
-  if(loadIv){clearInterval(loadIv);loadIv=null;}
-  var color=TAB_COLORS[curTab];
-  var h='';
-
-  // Header
-  h+='<div style="padding:48px 24px 24px;text-align:center;background:linear-gradient(180deg,#fff,#FAFAFA)">';
-  h+='<div style="display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 8px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B10,#845EF710);margin-bottom:16px">';
-  h+='<span style="font-size:14px">💬</span><span style="font-size:11px;font-weight:800;background:linear-gradient(135deg,#FF6B6B,#845EF7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px">ATTACHMENT ANALYZER</span></div>';
-  h+='<h1 style="font-size:42px;font-weight:900;color:#111;letter-spacing:3px">已读</h1>';
-  h+='<p style="font-size:14px;color:#ccc;font-weight:500;margin-top:8px">Ta不是不爱你&nbsp;&nbsp;是你们都有病</p></div>';
-
-  // Tabs
-  h+='<div style="display:flex;gap:10px;padding:0 20px 24px;justify-content:center;flex-wrap:wrap">';
-  var tids=["diagnose","translate","check"],tlabels=["确诊","翻译","发还是不发"],ticons=["🩺","🔮","💊"];
-  for(var i=0;i<3;i++){var on=curTab===tids[i];h+='<button data-action="tab" data-tab="'+tids[i]+'" style="padding:10px 18px;border-radius:999px;background:'+(on?TAB_COLORS[tids[i]]:"#fff")+';color:'+(on?"#fff":"#999")+';font-size:14px;font-weight:700;box-shadow:'+(on?"0 4px 18px "+TAB_COLORS[tids[i]]+"40":"0 1px 6px rgba(0,0,0,.05)")+';display:flex;align-items:center;gap:6px"><span style="font-size:15px">'+ticons[i]+'</span>'+tlabels[i]+'</button>';}
-  h+='</div>';
-
-  h+='<div style="padding:0 16px 40px;max-width:480px;margin:0 auto">';
-
-  if(curStep==="input"){
-    var phs={diagnose:"把聊天记录粘贴在这里...\n\n微信导出 / 直接复制 / 截图文字都行",translate:"Ta发的那句话...\n比如：到时候再说",check:"你想发给Ta的话...\n比如：你是不是不喜欢我了"};
-    var btns={diagnose:"开始确诊 🩺",translate:"翻译 🔮",check:"检测 💊"};
-    var rows=curTab==="diagnose"?10:4;
-    h+='<div class="fu"><div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-    h+='<textarea id="mainTA" rows="'+rows+'" placeholder="'+esc(phs[curTab])+'" style="width:100%;padding:12px 4px;background:transparent;border:none;color:#222;font-size:15px;line-height:1.8;resize:none;outline:none">'+esc(curText)+'</textarea></div>';
-    h+='<button data-action="submit" style="width:100%;margin-top:14px;padding:16px;border-radius:16px;font-size:16px;font-weight:700;color:#fff;background:'+(curText.trim()?color:"#E0E0E0")+';box-shadow:'+(curText.trim()?"0 6px 22px "+color+"35":"none")+';transition:all .25s">'+btns[curTab]+'</button></div>';
-  }
-  else if(curStep==="context"){
-    h+='<div class="fu"><div style="background:#fff;border-radius:24px;padding:28px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-    h+='<div style="font-size:22px;font-weight:900;color:#222;margin-bottom:6px">Ta是你的什么人？</div>';
-    h+='<div style="font-size:13px;color:#bbb;margin-bottom:20px">比如：暧昧三个月 / 同事 / Ta总是已读不回</div>';
-    h+='<textarea id="ctxTA" rows="3" placeholder="正在折磨我的人..." style="width:100%;padding:14px 4px;background:transparent;border:none;border-top:1px solid #f0f0f0;color:#222;font-size:15px;line-height:1.8;resize:none;outline:none">'+esc(curCtx)+'</textarea></div>';
-    h+='<div style="display:flex;gap:10px;margin-top:14px">';
-    h+='<button data-action="back" style="flex:1;padding:14px;background:#fff;color:#999;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 1px 6px rgba(0,0,0,.05)">返回</button>';
-    h+='<button data-action="submit" style="flex:2;padding:14px;background:#FF6B6B;color:#fff;border-radius:14px;font-size:15px;font-weight:700;box-shadow:0 6px 22px rgba(255,107,107,.3)">确诊 🩺</button>';
-    h+='</div></div>';
-  }
-  else if(curStep==="loading"){
-    var msgs=curTab==="diagnose"?["正在扫描互动模式","分析依恋信号中","Ta的防御机制正在被拆解","生成确诊报告"]:curTab==="translate"?["解码潜台词中","分析语气温度","翻译Ta的真实意图"]:["评估消息杀伤力","模拟Ta的反应","计算防御触发概率"];
-    h+='<div class="fu" style="text-align:center;padding:80px 20px">';
-    h+='<div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:999px;background:#fff;box-shadow:0 2px 20px rgba(0,0,0,.06)">';
-    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease 0s infinite"></span>';
-    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease .15s infinite"></span>';
-    h+='<span style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#845EF7);display:inline-block;animation:bounce .9s ease .3s infinite"></span>';
-    h+='<span id="loadTxt" style="font-size:13px;color:#666;font-weight:500">'+msgs[0]+'</span>';
-    h+='</div></div>';
-    var n=0;loadIv=setInterval(function(){n++;var el=document.getElementById("loadTxt");if(el)el.textContent=msgs[n%msgs.length];},1200);
-  }
-  else if(curStep==="error"){
-    h+='<div class="fu" style="text-align:center;padding:60px 20px">';
-    h+='<div style="font-size:40px;margin-bottom:16px">😵</div>';
-    h+='<div style="font-size:15px;color:#E03131;font-weight:600;margin-bottom:8px">分析出错了</div>';
-    h+='<div style="font-size:13px;color:#999;margin-bottom:24px">'+(curResult||"未知错误")+'</div>';
-    h+='<button data-action="reset" style="padding:12px 32px;background:#FF6B6B;color:#fff;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(255,107,107,.3)">重试</button>';
-    h+='</div>';
-  }
-  else if(curStep==="result"&&curResult){
-    h+='<div class="fu">';
-    if(curTab==="diagnose"){
-      var d=curResult,g=TYPE_GRADS[d.type]||TYPE_GRADS.avoidant,bg=TYPE_BGS[d.type]||TYPE_BGS.avoidant;
-      h+='<div style="background:'+g+';border-radius:24px;padding:40px 28px 36px;color:#fff;text-align:center;position:relative;overflow:hidden">';
-      h+='<div style="position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.1)"></div>';
-      h+='<div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)"></div>';
-      h+='<div style="font-size:60px;margin-bottom:10px;position:relative">'+(d.emoji||"🧊")+'</div>';
-      h+='<div style="font-size:11px;letter-spacing:5px;opacity:.75;margin-bottom:10px;font-weight:700;position:relative">确诊报告</div>';
-      h+='<div style="font-size:40px;font-weight:900;text-shadow:0 2px 16px rgba(0,0,0,.12);margin-bottom:6px;position:relative">'+esc(d.label)+'</div>';
-      h+='<div style="font-size:15px;opacity:.85;position:relative">'+esc(d.desc)+'</div></div>';
-      h+='<div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">';
-      (d.traits||[]).forEach(function(t){h+='<span style="padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;background:'+bg+';color:#555">#'+esc(t)+'</span>';});
-      h+='</div>';
-      h+='<div style="margin-top:16px;padding:22px 24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-      h+='<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#aaa;font-weight:700;letter-spacing:1px">置信度</span>';
-      h+='<span style="font-size:28px;font-weight:900;background:'+g+';-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+d.confidence+'%</span></div>';
-      h+='<div style="height:8px;background:#f2f2f2;border-radius:99px;overflow:hidden;margin-top:12px"><div style="height:100%;width:'+d.confidence+'%;background:'+g+';border-radius:99px;animation:grow 1.2s ease"></div></div>';
-      h+='<div style="font-size:12px;color:#ccc;margin-top:8px;text-align:right">剩下'+(100-d.confidence)+'%是给你留的希望</div></div>';
-      h+='<div style="margin-top:12px;padding:20px 24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04);display:flex;align-items:center;gap:16px">';
-      h+='<div style="width:48px;height:48px;border-radius:14px;background:'+g+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎯</div>';
-      h+='<div><div style="font-size:12px;color:#aaa;font-weight:700;margin-bottom:3px">核心模式</div><div style="font-size:18px;font-weight:800;color:#222">'+esc(d.pattern)+'</div></div></div>';
-      h+='<div style="margin-top:12px;padding:24px;background:#fff;border-radius:20px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-      h+='<div style="font-size:13px;color:#aaa;font-weight:700;letter-spacing:1px;margin-bottom:16px">Ta出卖自己的三句话</div>';
-      (d.signals||[]).forEach(function(s,i){h+=buildSigRow(s.icon||"💬",s.msg,s.meaning,bg,i===2);});
-      h+='</div>';
-      h+='<div style="margin-top:12px;padding:22px 24px;background:'+bg+';border-radius:20px">';
-      h+='<div style="font-size:13px;font-weight:800;color:#555;margin-bottom:10px">💡 回消息策略</div>';
-      h+='<div style="font-size:15px;line-height:1.9;color:#333;font-weight:500">'+esc(d.advice)+'</div></div>';
-      h+='<div style="margin-top:20px;text-align:center"><span style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B11,#845EF711);font-size:13px;color:#aaa;font-weight:500">📱 截图发给闺蜜 · Ta大概率也需要</span></div>';
-    }
-    else if(curTab==="translate"){
-      var r=curResult;
-      h+='<div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-      h+='<div style="padding:16px 20px;background:#F8F0FC;border-radius:14px;margin-bottom:20px;border-left:4px solid #845EF7">';
-      h+='<div style="font-size:11px;color:#bbb;font-weight:700;margin-bottom:4px;letter-spacing:1px">Ta说</div>';
-      h+='<div style="font-size:18px;font-weight:800;color:#222">「'+esc(curText)+'」</div></div>';
-      h+='<div style="text-align:center;padding:16px 0 20px;margin-bottom:20px;border-bottom:1px solid #f0f0f0">';
-      h+='<div style="font-size:11px;color:#bbb;margin-bottom:6px;font-weight:700;letter-spacing:1px">翻译结果</div>';
-      h+='<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FF6B6B,#845EF7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+esc(r.verdict)+'</div></div>';
-      (r.possibilities||[]).forEach(function(p,i){
-        h+='<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;'+(i<2?"border-bottom:1px solid #f5f5f5;":"")+'opacity:'+(i===0?1:.6)+'">';
-        h+='<div style="width:38px;height:38px;border-radius:10px;background:'+p.color+'18;color:'+p.color+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">'+p.label+'</div>';
-        h+='<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">';
-        h+='<span style="font-size:14px;font-weight:700;color:#222">'+esc(p.meaning)+'</span>';
-        h+='<span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:'+p.color+'18;color:'+p.color+'">'+p.percent+'%</span></div>';
-        h+='<div style="font-size:12px;color:#aaa">'+esc(p.reason)+'</div></div></div>';
-      });
-      h+='</div>';
-      h+='<div style="margin-top:14px;padding:18px 22px;background:#FFF5F5;border-radius:16px;display:flex;align-items:center;gap:12px">';
-      h+='<span style="font-size:22px">🎯</span><div><div style="font-size:13px;font-weight:800;color:#FF6B6B;margin-bottom:2px">最可能的是 '+esc(r.most_likely||"A")+'</div>';
-      h+='<div style="font-size:12px;color:#999">'+esc(r.most_likely_reason||"")+'</div></div></div>';
-    }
-    else{
-      var r=curResult,dc=r.danger?"#FF6B6B":"#20C997";
-      h+='<div style="background:#fff;border-radius:24px;padding:24px;box-shadow:0 1px 12px rgba(0,0,0,.04)">';
-      h+='<div style="padding:16px 20px;background:#F8F9FA;border-radius:14px;margin-bottom:24px;border-left:4px solid '+dc+'">';
-      h+='<div style="font-size:11px;color:#bbb;font-weight:700;margin-bottom:4px;letter-spacing:1px">你想发</div>';
-      h+='<div style="font-size:16px;font-weight:700;color:#222">「'+esc(curText)+'」</div></div>';
-      h+='<div style="text-align:center;padding:36px 20px 32px;margin-bottom:24px;border-radius:20px;background:'+(r.danger?"linear-gradient(135deg,#FFF5F5,#FFE3E3)":"linear-gradient(135deg,#F0FFF4,#D3F9D8)")+'">';
-      h+='<div style="font-size:52px;margin-bottom:10px">'+(r.danger?"🚨":"✅")+'</div>';
-      h+='<div style="font-size:40px;font-weight:900;color:'+(r.danger?"#E03131":"#0CA678")+'">'+esc(r.verdict)+'</div></div>';
-      if(r.danger){
-        h+='<div style="display:flex;gap:10px;margin-bottom:16px">';
-        h+='<div style="flex:1;padding:16px;background:#FFF5F5;border-radius:14px"><div style="font-size:11px;color:#ccc;font-weight:700;margin-bottom:6px">会触发</div><div style="font-size:14px;font-weight:800;color:#FF6B6B">'+esc(r.trigger||"")+'</div></div>';
-        h+='<div style="flex:1;padding:16px;background:#F8F9FA;border-radius:14px"><div style="font-size:11px;color:#ccc;font-weight:700;margin-bottom:6px">Ta大概率会</div><div style="font-size:13px;font-weight:500;color:#555">'+esc(r.prediction||"")+'</div></div></div>';
-        h+='<div style="padding:22px;border-radius:16px;background:linear-gradient(135deg,#F0FFF4,#E6FCF5);border:2px solid #C3FAE8">';
-        h+='<div style="font-size:12px;font-weight:800;color:#0CA678;margin-bottom:10px">✨ 替代版本</div>';
-        h+='<div style="font-size:17px;font-weight:800;color:#222;margin-bottom:8px">「'+esc(r.alternative||"")+'」</div>';
-        h+='<div style="font-size:12px;color:#888">→ '+esc(r.reason||"")+'</div></div>';
-      }else{
-        h+='<div style="padding:20px;border-radius:16px;background:#F0FFF4"><div style="font-size:14px;color:#333;font-weight:500">'+esc(r.reason||"")+'</div></div>';
-      }
-      h+='</div>';
-    }
-    h+='<button data-action="reset" style="width:100%;margin-top:20px;padding:16px;background:#fff;color:#999;border-radius:16px;font-size:14px;font-weight:600;box-shadow:0 1px 8px rgba(0,0,0,.04)">再来一次 ↻</button>';
-    h+='</div>';
-  }
-
-  h+='</div>';
-  h+='<div style="text-align:center;padding:32px 20px 52px"><div style="font-size:12px;color:#ddd;font-weight:500">已读 · Yidu</div><div style="font-size:11px;color:#e8e8e8;margin-top:4px">不治病，就确诊，其他的你自己决定</div></div>';
-
-  document.getElementById("app").innerHTML=h;
-
-  if(curStep==="input"){
-    var ta=document.getElementById("mainTA");
-    if(ta) ta.addEventListener("input",function(){curText=this.value;var btn=document.querySelector('[data-action="submit"]');if(btn){btn.style.background=curText.trim()?color:"#E0E0E0";btn.style.boxShadow=curText.trim()?"0 6px 22px "+color+"35":"none";}});
-  }
-  if(curStep==="context"){
-    var ta2=document.getElementById("ctxTA");
-    if(ta2) ta2.addEventListener("input",function(){curCtx=this.value;});
-  }
+function calcQuiz(ans) {
+  var s = { anxious:0, avoidant:0, secure:0, disorganized:0 };
+  ans.forEach(function(a){s[TMAP[a]]++});
+  var mx="secure",mv=0; Object.keys(s).forEach(function(k){if(s[k]>mv){mv=s[k];mx=k}});
+  return { type: mx, scores: s };
 }
 
-document.getElementById("app").addEventListener("click",function(e){
-  var target=e.target;
-  while(target&&target!==this){
-    var action=target.getAttribute("data-action");
-    if(action){
-      if(action==="tab"){
-        curTab=target.getAttribute("data-tab");curStep="input";curText="";curCtx="";curResult=null;render();
-      }else if(action==="submit"){
-        var ta=document.getElementById("mainTA");if(ta)curText=ta.value;
-        var ta2=document.getElementById("ctxTA");if(ta2)curCtx=ta2.value;
-        if(!curText.trim())return;
-        if(curTab==="diagnose"&&curStep==="input"){curStep="context";render();return;}
-        curStep="loading";render();
-        callAPI(curTab,curText,curCtx).then(function(res){
-          curResult=res;curStep="result";render();
-        }).catch(function(err){
-          curResult=err.message||"请求失败";curStep="error";render();
-        });
-      }else if(action==="back"){
-        curStep="input";render();
-      }else if(action==="reset"){
-        curText="";curCtx="";curResult=null;curStep="input";render();
-      }
-      return;
-    }
-    target=target.parentElement;
-  }
-});
+/* ═══ COMPONENTS ═══ */
+function Dots() { return <span style={{display:"inline-flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:7,height:7,borderRadius:"50%",background:`linear-gradient(135deg,${C.wine},${C.plum})`,display:"inline-block",animation:`bounce .9s ease ${i*.15}s infinite`}}/>)}</span>; }
 
-render();
-</script>
-</body>
-</html>
+function TCard({type,label,small}) {
+  var t=TI[type]||TI.secure;
+  return <div style={{background:t.grad,borderRadius:small?20:28,padding:small?"24px 18px 20px":"48px 28px 40px",color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",flex:small?1:undefined}}>
+    <div style={{position:"absolute",top:-60,right:-60,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
+    <div style={{position:"absolute",bottom:-40,left:-40,width:150,height:150,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+    <div style={{fontSize:small?40:72,marginBottom:small?8:16,position:"relative",animation:"float 3s ease infinite"}}>{t.emoji}</div>
+    {!small&&<div className="serif" style={{fontSize:12,letterSpacing:6,opacity:.6,marginBottom:12,fontWeight:400,position:"relative",fontStyle:"italic"}}>your attachment style</div>}
+    <div className="serif" style={{fontSize:small?22:44,fontWeight:900,marginBottom:small?4:10,position:"relative"}}>{label||t.label}</div>
+    <div className="sans" style={{fontSize:small?12:16,opacity:.8,position:"relative",fontWeight:400}}>{t.desc}</div>
+  </div>;
+}
+
+function EntryCard({icon,bg,title,sub,onClick}) {
+  return <button onClick={onClick} style={{width:"100%",background:C.card,borderRadius:20,padding:"24px 22px",boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line,cursor:"pointer",textAlign:"left",display:"flex",gap:18,alignItems:"center",marginBottom:14,transition:"transform .15s,box-shadow .15s"}}
+    onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 30px rgba(45,42,50,.08)"}}
+    onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 16px rgba(45,42,50,.04)"}}>
+    <div style={{width:56,height:56,borderRadius:16,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{icon}</div>
+    <div style={{flex:1}}><div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:4}}>{title}</div><div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{sub}</div></div>
+    <div style={{fontSize:20,color:C.muted,fontWeight:300}}>›</div>
+  </button>;
+}
+
+var sec = {marginTop:14,padding:"24px",background:C.card,borderRadius:22,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line};
+
+/* ═══ MAIN APP ═══ */
+function App() {
+  var [pg,setPg]=useState("home");
+  var [qi,setQi]=useState(0),[qa,setQa]=useState([]),[qr,setQr]=useState(null),[pk,setPk]=useState(-1);
+  var [text,setText]=useState(""),[ctx,setCtx]=useState(""),[img,setImg]=useState(null),[imgN,setImgN]=useState("");
+  var [step,setStep]=useState("input"),[res,setRes]=useState(null),[lm,setLm]=useState(""),[err,setErr]=useState(null);
+  var [pType,setPType]=useState("");
+  var [tarotCards,setTarotCards]=useState(null),[tarotRevealed,setTarotRevealed]=useState([false,false,false]),[synthesis,setSynthesis]=useState("");
+
+  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImg(null);setImgN("");setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
+  function resetInput(){setText("");setCtx("");setImg(null);setImgN("");setStep("input");setRes(null);setErr(null)}
+  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
+  function ansQ(i){setPk(i);setTimeout(function(){var n=[...qa,i];setQa(n);setPk(-1);if(qi<QUIZ.length-1)setQi(qi+1);else setQr(calcQuiz(n))},250)}
+  function handleImg(e){var f=e.target.files[0];if(!f)return;setImgN(f.name);var r=new FileReader();r.onload=function(ev){setImg(ev.target.result.split(",")[1])};r.readAsDataURL(f)}
+
+  function startTarot(){setTarotCards(drawCards());setTarotRevealed([false,false,false]);setSynthesis(getSynthesis())}
+  function revealCard(i){var n=[...tarotRevealed];n[i]=true;setTarotRevealed(n)}
+
+  async function submit(){
+    if(!text.trim()&&!img)return;
+    if((pg==="diagnose"||pg==="predict")&&step==="input"){setStep("context");return}
+    setStep("loading");setErr(null);
+    var mList={diagnose:["扫描互动模式","分析依恋信号","生成双人报告"],translate:["解码潜台词","翻译真实意图"],check:["评估杀伤力","模拟Ta反应"],predict:["扫描关系轨迹","模拟未来走向"]};
+    var msgs=mList[pg]||mList.diagnose;var n=0;setLm(msgs[0]);
+    var iv=setInterval(function(){n++;setLm(msgs[n%msgs.length])},1200);
+    try{
+      var content=[];
+      if(img)content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:img}});
+      var um="";
+      if(pg==="diagnose")um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"分析这张聊天截图");
+      else if(pg==="translate")um="Ta说的话：\n"+text;
+      else if(pg==="check")um="对方类型："+(pType?TI[pType].label:"未知")+"\n\n我想发："+text;
+      else um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"分析截图");
+      content.push({type:"text",text:um});
+      var r2=await callAI(P[pg],content);clearInterval(iv);setRes(r2);setStep("result");
+    }catch(e){clearInterval(iv);setErr(e.message||"出错了");setStep("input")}
+  }
+
+  var TABS=[{id:"quiz",label:"测试",icon:"🧪",c:"#FF922B"},{id:"diagnose",label:"确诊",icon:"🩺",c:C.wine},{id:"translate",label:"翻译",icon:"🔮",c:C.plum},{id:"check",label:"发不发",icon:"💊",c:C.sage},{id:"predict",label:"预测",icon:"🔭",c:"#5B8FB9"},{id:"tarot",label:"塔罗",icon:"🌙",c:C.gold}];
+  var curC=(TABS.find(function(t){return t.id===pg})||{}).c||C.wine;
+  var hasInput=text.trim()||img;
+
+  return <div className="sans" style={{minHeight:"100vh",background:C.bg,paddingBottom:80}}>
+    <style>{CSS}</style>
+
+    {/* ═══ HEADER ═══ */}
+    <div style={{padding:"48px 24px 16px",textAlign:"center",position:"relative"}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:200,background:"linear-gradient(180deg,"+C.warm+","+C.bg+")",zIndex:0}}/>
+      <div onClick={goHome} style={{cursor:"pointer",position:"relative",zIndex:1}}>
+        <div style={{fontSize:11,letterSpacing:8,color:C.gold,fontWeight:600,marginBottom:8,textTransform:"uppercase"}} className="sans">attachment analyzer</div>
+        <h1 className="serif" style={{fontSize:48,fontWeight:900,color:C.ink,letterSpacing:4,lineHeight:1}}>已读</h1>
+        <p className="serif" style={{fontSize:14,color:C.sub,marginTop:8,fontStyle:"italic",fontWeight:400}}>Ta不是不爱你 — 是你们都有病</p>
+      </div>
+    </div>
+
+    {/* ═══ TABS ═══ */}
+    {pg!=="home"&&<div style={{display:"flex",gap:6,padding:"4px 16px 20px",justifyContent:"center",flexWrap:"wrap",maxWidth:500,margin:"0 auto"}}>
+      {TABS.map(function(t){var on=pg===t.id;return <button key={t.id} onClick={function(){go(t.id)}} style={{padding:"7px 12px",borderRadius:999,border:on?"none":"1px solid "+C.line,background:on?t.c:C.card,color:on?"#fff":C.sub,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,boxShadow:on?"0 4px 14px "+t.c+"40":"none",transition:"all .2s"}}><span style={{fontSize:12}}>{t.icon}</span>{t.label}</button>})}
+    </div>}
+
+    <div style={{padding:"0 16px",maxWidth:500,margin:"0 auto"}}>
+
+    {/* ═══ HOME ═══ */}
+    {pg==="home"&&<div style={{animation:"fu .5s ease"}}>
+      {/* Daily quote */}
+      <div style={{padding:"20px 22px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:20,marginBottom:24,border:"1px solid "+C.line,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(196,155,106,.08)"}}/>
+        <div className="serif" style={{fontSize:16,fontWeight:400,color:C.ink,lineHeight:1.8,fontStyle:"italic",position:"relative"}}>"{DAILY}"</div>
+        <div className="sans" style={{fontSize:11,color:C.gold,marginTop:10,fontWeight:600,letterSpacing:2}}>每日毒鸡汤</div>
+      </div>
+
+      {/* Hero: two main features */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+        <button onClick={function(){go("quiz")}} style={{background:"linear-gradient(160deg,#FFF4E6,#FFE0B2)",borderRadius:22,padding:"28px 18px",border:"1px solid #F5DEB340",cursor:"pointer",textAlign:"center",boxShadow:"0 4px 20px rgba(255,146,43,.08)",transition:"transform .15s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:44,marginBottom:12}}>🧪</div>
+          <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:6}}>测试依恋类型</div>
+          <div className="sans" style={{fontSize:11,color:C.sub,lineHeight:1.5}}>20道专业题<br/>3分钟出结果</div>
+        </button>
+        <button onClick={function(){go("diagnose")}} style={{background:"linear-gradient(160deg,#FADDE1,#F8C4C8)",borderRadius:22,padding:"28px 18px",border:"1px solid "+C.wine+"15",cursor:"pointer",textAlign:"center",boxShadow:"0 4px 20px rgba(139,58,98,.08)",transition:"transform .15s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:44,marginBottom:12}}>🩺</div>
+          <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:6}}>聊天记录确诊</div>
+          <div className="sans" style={{fontSize:11,color:C.sub,lineHeight:1.5}}>粘贴或截图<br/>AI双方分析</div>
+        </button>
+      </div>
+
+      {/* Second row: 3 tools */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+        <button onClick={function(){go("translate")}} style={{background:C.card,borderRadius:18,padding:"22px 12px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"transform .15s",boxShadow:"0 2px 12px rgba(0,0,0,.03)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔮</div>
+          <div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink}}>翻译</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:4}}>潜台词解码</div>
+        </button>
+        <button onClick={function(){go("check")}} style={{background:C.card,borderRadius:18,padding:"22px 12px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"transform .15s",boxShadow:"0 2px 12px rgba(0,0,0,.03)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:32,marginBottom:8}}>💊</div>
+          <div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink}}>发不发</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:4}}>拦住冲动</div>
+        </button>
+        <button onClick={function(){go("predict")}} style={{background:C.card,borderRadius:18,padding:"22px 12px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"transform .15s",boxShadow:"0 2px 12px rgba(0,0,0,.03)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔭</div>
+          <div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink}}>预测</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:4}}>感情走向</div>
+        </button>
+      </div>
+
+      {/* Tarot banner */}
+      <button onClick={function(){go("tarot")}} style={{width:"100%",background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",borderRadius:22,padding:"24px 24px",border:"none",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:18,marginBottom:24,position:"relative",overflow:"hidden",boxShadow:"0 4px 24px rgba(45,42,50,.12)",transition:"transform .15s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,155,106,.15),transparent)"}}/>
+        <div style={{fontSize:44,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
+        <div style={{flex:1,position:"relative"}}>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:"#fff",marginBottom:4}}>塔罗牌占卜</div>
+          <div className="sans" style={{fontSize:12,color:"rgba(255,255,255,.55)"}}>抽三张牌 · 过去现在未来</div>
+        </div>
+        <div style={{color:C.gold,fontSize:20,position:"relative"}}>›</div>
+      </button>
+
+      {/* Type grid */}
+      <div>
+        <div className="serif" style={{fontSize:13,color:C.muted,textAlign:"center",marginBottom:14,fontStyle:"italic"}}>four attachment styles</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {Object.keys(TI).map(function(k){return <div key={k} style={{padding:"16px",borderRadius:18,background:TI[k].bg,border:"1px solid "+C.line}}>
+            <div style={{fontSize:28,marginBottom:6}}>{TI[k].emoji}</div>
+            <div className="serif" style={{fontSize:15,fontWeight:700,color:TI[k].color}}>{TI[k].label}</div>
+            <div className="sans" style={{fontSize:11,color:C.sub,marginTop:2}}>{TI[k].desc}</div>
+          </div>})}
+        </div>
+      </div>
+    </div>}
+
+    {/* ═══ QUIZ ═══ */}
+    {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+        <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
+        <span className="sans" style={{fontSize:12,color:C.muted}}>{qi+1}/{QUIZ.length}</span>
+      </div>
+      <div style={{height:3,background:C.line,borderRadius:99,overflow:"hidden",marginBottom:24}}>
+        <div style={{height:"100%",width:((qi+1)/QUIZ.length)*100+"%",background:"linear-gradient(90deg,"+C.gold+","+C.wine+")",borderRadius:99,transition:"width .3s"}}/>
+      </div>
+      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 20px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink,marginBottom:24,lineHeight:1.6}}>{QUIZ[qi].q}</div>
+        {QUIZ[qi].a.map(function(a,i){var on=pk===i;return <button key={i} onClick={function(){ansQ(i)}} style={{width:"100%",padding:"16px 20px",marginBottom:10,borderRadius:16,border:on?"2px solid "+C.gold:"2px solid "+C.line,background:on?C.gold+"12":C.bg,color:on?C.gold:C.ink,fontSize:14,fontWeight:500,textAlign:"left",cursor:"pointer",lineHeight:1.6,transition:"all .15s"}} className="sans">
+          <span style={{display:"inline-flex",width:24,height:24,borderRadius:8,background:on?C.gold:C.muted+"40",color:on?"#fff":C.sub,alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,marginRight:12,verticalAlign:"middle"}}>{String.fromCharCode(65+i)}</span>{a}
+        </button>})}
+      </div>
+    </div>}
+
+    {pg==="quiz"&&qr&&<div style={{animation:"fu .5s ease"}}>
+      <TCard type={qr.type}/>
+      <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:18,flexWrap:"wrap"}}>{TI[qr.type].traits.map(function(tr,i){return <span key={i} className="sans" style={{padding:"6px 14px",borderRadius:999,fontSize:12,fontWeight:600,background:TI[qr.type].bg,color:C.ink+"CC",border:"1px solid "+C.line}}>#{tr}</span>})}</div>
+      <div style={sec}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>🔍 你的画像</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].detail}</div></div>
+      <div style={sec}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.sub,marginBottom:14}}>各维度得分</div>
+        {Object.keys(qr.scores).map(function(k){var pct=Math.round((qr.scores[k]/QUIZ.length)*100);return <div key={k} style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}><span style={{fontSize:18,width:26}}>{TI[k].emoji}</span><span className="sans" style={{fontSize:13,width:50,color:C.sub,fontWeight:600}}>{TI[k].label}</span><div style={{flex:1,height:8,background:C.line,borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:TI[k].grad,borderRadius:99,transition:"width .8s"}}/></div><span className="sans" style={{fontSize:14,color:TI[k].color,fontWeight:700,width:36,textAlign:"right"}}>{pct}%</span></div>})}
+      </div>
+      <div style={{...sec,background:TI[qr.type].bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>💡 给你的话</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].advice}</div></div>
+      <div style={{display:"flex",gap:10,marginTop:18}}>
+        <button onClick={function(){setQi(0);setQa([]);setQr(null)}} className="sans" style={{flex:1,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重测 ↻</button>
+        <button onClick={function(){go("diagnose")}} className="sans" style={{flex:1,padding:14,background:C.wine,color:"#fff",border:"none",borderRadius:16,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px "+C.wine+"30"}}>聊天记录确诊 🩺</button>
+      </div>
+    </div>}
+
+    {/* ═══ TAROT ═══ */}
+    {pg==="tarot"&&<div style={{animation:"fu .5s ease"}}>
+      {!tarotCards&&<div style={{textAlign:"center"}}>
+        <div style={{background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",borderRadius:28,padding:"48px 28px",color:"#fff",position:"relative",overflow:"hidden",marginBottom:20}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 30% 40%,rgba(196,155,106,.15),transparent 50%),radial-gradient(circle at 70% 60%,rgba(123,107,168,.15),transparent 50%)"}}/>
+          <div style={{fontSize:72,marginBottom:16,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
+          <div className="serif" style={{fontSize:28,fontWeight:700,marginBottom:8,position:"relative"}}>塔罗牌占卜</div>
+          <div className="sans" style={{fontSize:14,opacity:.7,position:"relative",lineHeight:1.7}}>抽三张牌<br/>过去 · 现在 · 未来</div>
+        </div>
+        <button onClick={startTarot} className="sans" style={{width:"100%",padding:18,borderRadius:18,border:"none",fontSize:17,fontWeight:700,color:"#fff",cursor:"pointer",background:"linear-gradient(135deg,"+C.gold+","+C.wine+")",boxShadow:"0 8px 30px "+C.wine+"30",animation:"glow 3s ease infinite"}}>开始抽牌 ✨</button>
+      </div>}
+
+      {tarotCards&&<div>
+        <div className="serif" style={{textAlign:"center",fontSize:14,color:C.gold,fontStyle:"italic",marginBottom:20}}>点击卡牌翻开</div>
+        <div style={{display:"flex",gap:12,marginBottom:24}}>
+          {tarotCards.map(function(card,i){
+            var revealed=tarotRevealed[i];
+            return <div key={i} onClick={function(){revealCard(i)}} style={{flex:1,cursor:revealed?"default":"pointer"}}>
+              <div className="sans" style={{textAlign:"center",fontSize:11,color:C.gold,fontWeight:700,marginBottom:8,letterSpacing:2}}>{card.pos}</div>
+              <div style={{
+                borderRadius:18,padding:revealed?"20px 14px":"28px 14px",
+                background:revealed?"linear-gradient(160deg,"+C.warm+",#fff)":"linear-gradient(160deg,#2D2A32,#4A3F5C)",
+                border:"2px solid "+(revealed?C.gold+"40":"rgba(196,155,106,.3)"),
+                textAlign:"center",minHeight:180,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                transition:"all .4s ease",
+                boxShadow:revealed?"0 8px 30px rgba(45,42,50,.08)":"0 4px 20px rgba(45,42,50,.15)",
+                animation:revealed?"fu .4s ease":"none",
+                transform:card.reversed&&revealed?"rotate(180deg)":"none",
+              }}>
+                {!revealed&&<div><div style={{fontSize:40,marginBottom:8,opacity:.6}}>🌙</div><div className="serif" style={{fontSize:12,color:"rgba(255,255,255,.4)",fontStyle:"italic"}}>tap to reveal</div></div>}
+                {revealed&&<div style={{transform:card.reversed?"rotate(180deg)":"none"}}>
+                  <div style={{fontSize:36,marginBottom:8}}>{card.icon}</div>
+                  <div className="serif" style={{fontSize:16,fontWeight:700,color:C.ink,marginBottom:4}}>{card.name}</div>
+                  <div className="sans" style={{fontSize:10,color:card.reversed?C.rose:C.gold,fontWeight:700,letterSpacing:1}}>{card.reversed?"逆位":"正位"}</div>
+                </div>}
+              </div>
+            </div>
+          })}
+        </div>
+
+        {/* Readings */}
+        {tarotRevealed.every(Boolean)&&<div style={{animation:"fu .5s ease"}}>
+          {/* Synthesis */}
+          <div style={{...sec,background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",border:"none",color:"#fff",marginBottom:14}}>
+            <div className="serif" style={{fontSize:13,color:C.gold,fontStyle:"italic",letterSpacing:2,marginBottom:10}}>综合解读</div>
+            <div className="sans" style={{fontSize:15,lineHeight:2,opacity:.9}}>{synthesis}</div>
+          </div>
+
+          {/* Individual Cards */}
+          {tarotCards.map(function(card,i){
+            var reading = card.reversed ? card.rev : card.up;
+            return <div key={i} style={{...sec,marginBottom:14,overflow:"hidden"}}>
+              {/* Card Header */}
+              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,paddingBottom:16,borderBottom:"1px solid "+C.line}}>
+                <div style={{width:52,height:52,borderRadius:16,background:card.reversed?"linear-gradient(135deg,#FFE3E3,#FFC9C9)":"linear-gradient(135deg,"+C.warm+",#FFF3E0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{card.icon}</div>
+                <div style={{flex:1}}>
+                  <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink}}>{card.pos} · {card.name}</div>
+                  <div className="sans" style={{fontSize:11,color:C.sub,marginTop:2}}>{card.posDesc}</div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+                  <div className="sans" style={{fontSize:11,color:card.reversed?C.rose:C.gold,fontWeight:700,letterSpacing:1}}>{card.reversed?"逆位":"正位"}</div>
+                  <div className="sans" style={{fontSize:10,color:C.muted,marginTop:2}}>{card.num} · {card.element}</div>
+                </div>
+              </div>
+
+              {/* Main Reading */}
+              <div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD",marginBottom:16}}>{reading}</div>
+
+              {/* Love Advice */}
+              <div style={{padding:"14px 18px",background:card.reversed?"#FFF5F3":C.warm,borderRadius:14,marginBottom:12,borderLeft:"3px solid "+(card.reversed?C.rose:C.gold)}}>
+                <div className="sans" style={{fontSize:12,fontWeight:700,color:card.reversed?C.rose:C.gold,marginBottom:4}}>💕 感情启示</div>
+                <div className="serif" style={{fontSize:14,fontWeight:400,color:C.ink,fontStyle:"italic",lineHeight:1.7}}>{card.love}</div>
+              </div>
+
+              {/* Details Grid */}
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1,padding:"12px 14px",background:C.bg,borderRadius:12}}>
+                  <div className="sans" style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:4,letterSpacing:1}}>能量</div>
+                  <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{card.energy}</div>
+                </div>
+                <div style={{flex:1,padding:"12px 14px",background:C.bg,borderRadius:12}}>
+                  <div className="sans" style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:4,letterSpacing:1}}>时机</div>
+                  <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{card.timing}</div>
+                </div>
+              </div>
+
+              {/* Action */}
+              <div style={{marginTop:12,padding:"14px 18px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:14}}>
+                <div className="sans" style={{fontSize:12,fontWeight:700,color:C.plum,marginBottom:4}}>✦ 行动指引</div>
+                <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{card.action}</div>
+              </div>
+            </div>
+          })}
+
+          {/* Share & Restart */}
+          <div style={{marginTop:8,textAlign:"center"}}><span className="sans" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:999,background:"linear-gradient(135deg,"+C.gold+"15,"+C.plum+"15)",fontSize:13,color:C.sub}}>📱 截图分享你的牌阵</span></div>
+          <button onClick={startTarot} className="sans" style={{width:"100%",marginTop:14,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重新抽牌 ↻</button>
+        </div>}
+      </div>}
+    </div>}
+
+    {/* ═══ INPUT ═══ */}
+    {pg!=="home"&&pg!=="quiz"&&pg!=="tarot"&&step==="input"&&<div style={{animation:"fu .4s ease"}}>
+      {err&&<div className="sans" style={{padding:"14px 18px",background:"#FFF5F5",borderRadius:14,marginBottom:14,fontSize:13,color:C.rose,border:"1px solid #FFE3E3"}}>{err}</div>}
+      <div style={{background:C.card,borderRadius:24,padding:26,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        {pg==="check"&&<div style={{marginBottom:18}}>
+          <div className="serif" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:12}}>Ta的依恋类型</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["avoidant","anxious","secure","disorganized"].map(function(k){return <button key={k} onClick={function(){setPType(k)}} className="sans" style={{padding:"9px 15px",borderRadius:14,border:pType===k?"2px solid "+TI[k].color:"2px solid "+C.line,background:pType===k?TI[k].bg:C.card,color:pType===k?TI[k].color:C.sub,fontSize:13,fontWeight:600,cursor:"pointer"}}>{TI[k].emoji} {TI[k].label}</button>})}</div>
+        </div>}
+        {(pg==="diagnose"||pg==="predict")&&<div style={{marginBottom:16}}>
+          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:16,borderRadius:16,border:"2px dashed "+(img?C.sage+"80":C.line),cursor:"pointer",color:img?C.sage:C.muted,fontSize:14,fontWeight:600,background:img?"#F0FFF4":C.bg,transition:"all .2s"}} className="sans">
+            <span style={{fontSize:22}}>{img?"✅":"📷"}</span>{img?imgN:"上传聊天截图"}
+            <input type="file" accept="image/*" onChange={handleImg} style={{display:"none"}}/>
+          </label>
+          <div className="sans" style={{textAlign:"center",fontSize:12,color:C.muted,margin:"12px 0 6px"}}>—— 或 ——</div>
+        </div>}
+        <textarea className="sans" style={{width:"100%",padding:"14px 4px",background:"transparent",border:"none",color:C.ink,fontSize:15,lineHeight:1.9,resize:"none",outline:"none"}}
+          rows={pg==="translate"||pg==="check"?4:7}
+          placeholder={pg==="diagnose"?"粘贴聊天记录...":pg==="translate"?"Ta说的话（可以多条一行一句）...":pg==="check"?"你想发的消息...":"粘贴聊天记录..."}
+          value={text} onChange={function(e){setText(e.target.value)}}/>
+      </div>
+      <button onClick={submit} disabled={!hasInput} className="sans" style={{width:"100%",marginTop:16,padding:17,borderRadius:18,border:"none",fontSize:16,fontWeight:700,color:"#fff",cursor:hasInput?"pointer":"default",background:hasInput?curC:"#ddd",boxShadow:hasInput?"0 8px 28px "+curC+"30":"none",transition:"all .2s"}}>
+        {pg==="diagnose"?"开始确诊 🩺":pg==="translate"?"翻译 🔮":pg==="check"?"检测 💊":"预测 🔭"}
+      </button>
+    </div>}
+
+    {/* Context */}
+    {(pg==="diagnose"||pg==="predict")&&step==="context"&&<div style={{animation:"fu .4s ease"}}>
+      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        <div className="serif" style={{fontSize:22,fontWeight:700,color:C.ink,marginBottom:8}}>Ta是你的什么人？</div>
+        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:20}}>比如：暧昧三个月 / 同事 / Ta总是已读不回</div>
+        <textarea className="sans" style={{width:"100%",padding:"14px 4px",background:"transparent",border:"none",borderTop:"1px solid "+C.line,color:C.ink,fontSize:15,lineHeight:1.9,resize:"none",outline:"none"}} rows={3} placeholder="正在折磨我的人..." value={ctx} onChange={function(e){setCtx(e.target.value)}}/>
+      </div>
+      <div style={{display:"flex",gap:10,marginTop:14}}>
+        <button onClick={function(){setStep("input")}} className="sans" style={{flex:1,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>返回</button>
+        <button onClick={submit} className="sans" style={{flex:2,padding:14,background:curC,color:"#fff",border:"none",borderRadius:16,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 6px 22px "+curC+"30"}}>{pg==="diagnose"?"确诊 🩺":"预测 🔭"}</button>
+      </div>
+    </div>}
+
+    {/* Loading */}
+    {step==="loading"&&<div style={{textAlign:"center",padding:"80px 20px",animation:"fu .4s ease"}}>
+      <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:999,background:C.card,boxShadow:"0 4px 24px rgba(45,42,50,.06)",border:"1px solid "+C.line}}><Dots/><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:500}}>{lm}</span></div>
+    </div>}
+
+    {/* ═══ DIAGNOSE RESULT ═══ */}
+    {pg==="diagnose"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{display:"flex",gap:12,marginBottom:14}}><TCard type={res.user_type} label={"你："+res.user_label} small/><TCard type={res.partner_type} label={"Ta："+res.partner_label} small/></div>
+      <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🔗 互动模式</div><div className="sans" style={{fontSize:15,lineHeight:1.9,color:C.ink+"DD"}}>{res.match}</div></div>
+      <div style={sec}><div style={{display:"flex",justifyContent:"space-between"}}><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:700}}>置信度</span><span className="sans" style={{fontSize:24,fontWeight:900,color:C.wine}}>{res.confidence}%</span></div><div style={{height:5,background:C.line,borderRadius:99,overflow:"hidden",marginTop:10}}><div style={{height:"100%",width:res.confidence+"%",background:"linear-gradient(90deg,"+C.wine+","+C.plum+")",borderRadius:99}}/></div></div>
+      <div style={{...sec,padding:24}}><div className="sans" style={{fontSize:13,color:C.sub,fontWeight:700,marginBottom:14}}>暴露信号</div>
+        {(res.signals||[]).map(function(s,i){return <div key={i} style={{display:"flex",gap:12,padding:"12px 0",borderBottom:i<2?"1px solid "+C.line:"none"}}><div style={{width:36,height:36,borderRadius:12,background:s.who==="用户"?"#FFF5F3":"#F0F6FA",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{s.icon}</div><div style={{flex:1}}><div className="sans" style={{fontSize:12,color:C.sub,marginBottom:2}}>{s.who}</div><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:4}}>{"「"+s.msg+"」"}</div><div className="sans" style={{fontSize:13,color:C.sub}}>{"→ "+s.meaning}</div></div></div>})}
+      </div>
+      <div style={{...sec,background:(TI[res.user_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 给你</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.user_advice}</div></div>
+      <div style={{...sec,background:(TI[res.partner_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🎯 应对Ta</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.partner_advice}</div></div>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ TRANSLATE RESULT ═══ */}
+    {pg==="translate"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      {(res.translations||[]).map(function(tr,ti){var colors=[C.rose,"#E6A817",C.plum];return <div key={ti} style={{...sec,marginBottom:14}}>
+        <div style={{padding:"14px 18px",background:C.warm,borderRadius:14,marginBottom:16,borderLeft:"3px solid "+C.plum}}>
+          <div className="sans" style={{fontSize:11,color:C.sub,fontWeight:700,marginBottom:2}}>Ta说</div>
+          <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink}}>{"「"+tr.original+"」"}</div>
+        </div>
+        <div className="serif" style={{fontSize:17,fontWeight:700,color:C.plum,marginBottom:14}}>{tr.verdict}</div>
+        {(tr.possibilities||[]).map(function(p,i){return <div key={i} style={{display:"flex",gap:10,padding:"10px 0",opacity:i===0?1:.55,borderBottom:i<2?"1px solid "+C.line:"none"}}>
+          <div className="sans" style={{width:28,height:28,borderRadius:8,background:colors[i]+"18",color:colors[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{p.label}</div>
+          <div style={{flex:1}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.ink}}>{p.meaning} <span style={{fontSize:11,color:C.sub}}>{p.percent}%</span></div><div className="sans" style={{fontSize:12,color:C.sub}}>{p.reason}</div></div>
+        </div>})}
+        <div style={{marginTop:12,padding:"10px 14px",background:"#FFF5F3",borderRadius:12,fontSize:13}} className="sans"><span style={{fontWeight:800,color:C.rose}}>最可能：{tr.most_likely}</span> <span style={{color:C.sub}}>{tr.why}</span></div>
+      </div>})}
+      <button onClick={resetInput} className="sans" style={{width:"100%",padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ CHECK RESULT ═══ */}
+    {pg==="check"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{...sec,padding:24}}>
+        <div style={{textAlign:"center",padding:"32px 20px 28px",marginBottom:20,borderRadius:22,background:res.danger?"linear-gradient(135deg,#FFF5F3,#FFE3E3)":"linear-gradient(135deg,#F0FFF4,#D3F9D8)"}}>
+          <div style={{fontSize:52,marginBottom:10}}>{res.danger?"🚨":"✅"}</div>
+          <div className="serif" style={{fontSize:38,fontWeight:900,color:res.danger?"#C4616C":C.sage}}>{res.verdict}</div>
+        </div>
+        {res.type_note&&<div className="sans" style={{padding:"14px 18px",background:C.warm,borderRadius:14,marginBottom:16,fontSize:14,color:C.ink+"CC",lineHeight:1.8}}><span style={{fontWeight:700}}>🎯 </span>{res.type_note}</div>}
+        {res.danger&&<div>
+          <div style={{display:"flex",gap:10,marginBottom:14}}>
+            <div style={{flex:1,padding:16,background:"#FFF5F3",borderRadius:14}}><div className="sans" style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:4}}>会触发</div><div className="sans" style={{fontSize:13,fontWeight:800,color:C.rose}}>{res.trigger}</div></div>
+            <div style={{flex:1,padding:16,background:C.warm,borderRadius:14}}><div className="sans" style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:4}}>Ta会</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.prediction}</div></div>
+          </div>
+          <div style={{padding:22,borderRadius:18,background:"linear-gradient(135deg,#F0FFF4,#E6FCF5)",border:"2px solid #C3FAE8"}}>
+            <div className="sans" style={{fontSize:12,fontWeight:800,color:C.sage,marginBottom:8}}>✨ 替代版本</div>
+            <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:6}}>{"「"+res.alternative+"」"}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub}}>{"→ "+res.reason}</div>
+          </div>
+        </div>}
+        {!res.danger&&<div style={{padding:18,background:"#F0FFF4",borderRadius:14}} className="sans"><div style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.reason}</div></div>}
+      </div>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ PREDICT RESULT ═══ */}
+    {pg==="predict"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{...sec,background:"linear-gradient(135deg,#EDF2FF,#F0E6F6)",border:"none",marginBottom:14}}>
+        <div className="sans" style={{fontSize:12,color:C.gold,fontWeight:700,marginBottom:6,letterSpacing:1}}>当前阶段</div>
+        <div className="serif" style={{fontSize:22,fontWeight:900,color:C.ink,marginBottom:8}}>{res.stage}</div>
+        <div className="sans" style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.stage_desc}</div>
+      </div>
+      <div className="serif" style={{fontSize:14,color:C.gold,fontStyle:"italic",marginBottom:12}}>🔮 时间线预测</div>
+      {(res.predictions||[]).map(function(p,i){var bgs=["#FFF5F3","#FFF9E6","#F0FFF4"];return <div key={i} style={{...sec,display:"flex",gap:14,alignItems:"flex-start"}}>
+        <div style={{width:46,height:46,borderRadius:14,background:bgs[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{p.emoji}</div>
+        <div style={{flex:1}}><div className="sans" style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.time}</span><span style={{fontSize:12,color:C.sub,fontWeight:700}}>{p.prob}%</span></div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{p.scene}</div></div>
+      </div>})}
+      <div style={{...sec,background:"#FFF5F3",border:"none"}}><div className="sans" style={{fontSize:13,fontWeight:800,color:C.rose,marginBottom:6}}>⚠️ 转折点</div><div className="sans" style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.turning}</div></div>
+      <div style={{display:"flex",gap:10,marginTop:14}}>
+        <div style={{flex:1,...sec,background:"#F0FFF4",border:"none"}}><div className="sans" style={{fontSize:12,fontWeight:700,color:C.sage,marginBottom:4}}>最好</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.best}</div></div>
+        <div style={{flex:1,...sec,background:"#FFF5F3",border:"none"}}><div className="sans" style={{fontSize:12,fontWeight:700,color:C.rose,marginBottom:4}}>最差</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.worst}</div></div>
+      </div>
+      <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 你现在应该做的一件事</div><div className="sans" style={{fontSize:15,fontWeight:600,color:C.ink,lineHeight:1.9}}>{res.todo}</div></div>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    </div>
+
+    {/* Footer */}
+    <div style={{textAlign:"center",padding:"40px 20px 20px"}}>
+      <div className="serif" style={{fontSize:14,color:C.muted,fontStyle:"italic"}}>已读 · Yidu</div>
+      <div className="sans" style={{fontSize:11,color:C.muted+"80",marginTop:4}}>不治病，就确诊，其他的你自己决定</div>
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script></body></html>
