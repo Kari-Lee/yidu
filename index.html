@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#FBF7F0;color:#2D2A32;min-height:100vh}
+body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#FFFFFF;color:#2D2A32;min-height:100vh}
 .sf{font-family:'Playfair Display',Georgia,serif}
 button{font-family:inherit;cursor:pointer;border:none}
 textarea{font-family:inherit;display:block}
@@ -29,12 +29,12 @@ textarea::placeholder{color:#C5C0CB}
 const { useState, useEffect } = React;
 
 /* ═══ DESIGN SYSTEM ═══ */
-const C = { bg: "#FBF7F0", card: "#FFFFFF", wine: "#8B3A62", gold: "#C49B6A", plum: "#7B6BA8", sage: "#6B9080", rose: "#D4847C", ink: "#2D2A32", sub: "#8E8A93", muted: "#C5C0CB", line: "#EDE8E0", warm: "#F5EFE6" };
+const C = { bg: "#FFFFFF", card: "#FFFFFF", wine: "#8B3A62", gold: "#C49B6A", plum: "#7B6BA8", sage: "#6B9080", rose: "#D4847C", ink: "#2D2A32", sub: "#8E8A93", muted: "#C5C0CB", line: "#F0EDF2", warm: "#F8F5FF" };
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:${C.bg}}
+body{background:#fff}
 @keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
@@ -58,6 +58,28 @@ const QUOTES = [
   "焦虑型+回避型=一场精心编排的互相折磨",
   "你删了又加的不是Ta，是你的自尊",
   "「到时候再说」翻译：永远不会到那个时候",
+  "「我没生气」= 我气得要死但你猜不到算你输",
+  "回避型谈恋爱就像猫：你追Ta跑，你走Ta看",
+  "焦虑型发了三条消息没回：已经在想葬礼穿什么了",
+  "Ta不是高冷，是对你冷",
+  "「忙完了联系你」翻译：忙完了也不会联系你",
+  "焦虑型最大的技能：对方还没做任何事就开始受伤",
+  "安全型是怎么做到的？Ta们是NPC吗",
+  "每个焦虑型手机里都有一个编辑好但没发出去的消息",
+  "Ta说「我们冷静一下」= Ta已经冷静了，需要冷静的是你",
+  "混乱型谈恋爱像坐过山车——区别是过山车还有安全带",
+  "不回消息是在忙，秒回别人是在选择",
+  "分手后焦虑型：发了500字长文。回避型：已读。",
+  "「我觉得我们需要谈谈」这句话能让回避型原地去世",
+  "你反复看聊天记录不是在回忆，是在找证据证明Ta爱你",
+  "Ta说「随便」的时候你最好什么都别随便",
+  "回避型的爱情观：我爱你但你别靠太近谢谢",
+  "焦虑型的手机永远有电，因为Ta不敢错过任何一条消息",
+  "Ta对你忽冷忽热不是在考验你，是Ta自己也不知道要什么",
+  "「你觉得呢」= 我有标准答案但我要你先猜",
+  "所有「算了没事」的背后都是「有事很大的事」",
+  "回避型分手后：终于自由了。三天后：有点想Ta了。一周后：算了不想了",
+  "你不是恋爱脑，是焦虑型依恋在控制你的大脑",
 ];
 const DAILY = QUOTES[Math.floor(Math.random() * QUOTES.length)];
 
@@ -237,7 +259,12 @@ function App() {
       </div>
     </div>
 
-    {/* ═══ TABS ═══ */}
+    {/* ═══ BACK + TABS ═══ */}
+    {pg!=="home"&&<div style={{maxWidth:500,margin:"0 auto",padding:"0 16px"}}>
+      <button onClick={goHome} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 0",marginBottom:8,background:"none",color:C.sub,fontSize:13,fontWeight:600}}>
+        <span style={{fontSize:18}}>&#8249;</span> 返回首页
+      </button>
+    </div>}
     {pg!=="home"&&<div style={{display:"flex",gap:6,padding:"4px 16px 20px",justifyContent:"center",flexWrap:"wrap",maxWidth:500,margin:"0 auto"}}>
       {TABS.map(function(t){var on=pg===t.id;return <button key={t.id} onClick={function(){go(t.id)}} style={{padding:"7px 12px",borderRadius:999,border:on?"none":"1px solid "+C.line,background:on?t.c:C.card,color:on?"#fff":C.sub,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,boxShadow:on?"0 4px 14px "+t.c+"40":"none",transition:"all .2s"}}><span style={{fontSize:12}}>{t.icon}</span>{t.label}</button>})}
     </div>}
