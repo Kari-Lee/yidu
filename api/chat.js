@@ -7,41 +7,44 @@ module.exports = async function handler(req, res) {
 
   var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
-
-  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com/anthropic";
+  var baseUrl = process.env.API_BASE_URL || "https://api.apiyi.com";
 
   try {
     var body = req.body;
+    var messages = [];
+    if (body.system) messages.push({ role: "system", content: body.system });
 
-    var response = await fetch(baseUrl + "/v1/messages", {
+    if (body.images && body.images.length > 0) {
+      var userContent = [];
+      body.images.forEach(function(img) {
+        userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img } });
+      });
+      userContent.push({ type: "text", text: body.message || "请分析这些聊天记录截图" });
+      messages.push({ role: "user", content: userContent });
+    } else {
+      messages.push({ role: "user", content: body.message });
+    }
+
+    var response = await fetch(baseUrl + "/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "Authorization": "Bearer " + apiKey,
       },
       body: JSON.stringify({
-        model: "MiniMax-M2.5",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 2048,
-        system: body.system || "",
-        messages: [{ role: "user", content: body.message }],
+        messages: messages,
       }),
     });
 
     var data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: JSON.stringify(data) });
-    }
+    if (!response.ok) return res.status(response.status).json({ error: JSON.stringify(data) });
 
     var text = "";
-    if (data.content) {
-      for (var i = 0; i < data.content.length; i++) {
-        if (data.content[i].type === "text") {
-          text += data.content[i].text;
-        }
-      }
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      text = data.choices[0].message.content;
     }
-
     return res.status(200).json({ text: text });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Internal error" });
