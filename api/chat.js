@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
       messages.push({ role: "user", content: body.message });
     }
 
-    var response = await fetch(baseUrl + "/v1/chat/completions", {
+    var response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
