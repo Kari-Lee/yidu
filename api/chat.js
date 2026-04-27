@@ -32,7 +32,7 @@ module.exports = async function handler(req, res) {
         "Authorization": "Bearer " + apiKey,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "MiniMax-M2.7",
         max_tokens: 2048,
         messages: messages,
       }),
