@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#FFFFFF;color:#2D2A32;min-height:100vh}
+body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#fff;color:#2D2A32;min-height:100vh}
 .sf{font-family:'Playfair Display',Georgia,serif}
 button{font-family:inherit;cursor:pointer;border:none}
 textarea{font-family:inherit;display:block}
@@ -160,12 +160,15 @@ const P = {
   predict: `你是「已读」感情预测器。根据聊天记录预测走向。严格按JSON回复：{"stage":"当前阶段","stage_desc":"描述","predictions":[{"time":"1周后","scene":"预测","prob":数字,"emoji":"emoji"},{"time":"1个月后","scene":"","prob":0,"emoji":""},{"time":"3个月后","scene":"","prob":0,"emoji":""}],"turning":"转折点","best":"最好","worst":"最差","todo":"该做的一件事"}`,
 };
 
-async function callAI(sys, content) {
+async function callAI(sys, message, images) {
+  var body = { system: sys, message: message };
+  if (images && images.length > 0) body.images = images;
   var r = await fetch("/api/chat", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system: sys, message: typeof content === "string" ? content : content.filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("") }),
+    body: JSON.stringify(body),
   });
   var d = await r.json();
+  if (!r.ok) throw new Error(d.error || "API error");
   var raw = d.text;
   return JSON.parse(raw.replace(/```json|```/g,"").trim());
 }
@@ -208,43 +211,50 @@ var sec = {marginTop:14,padding:"24px",background:C.card,borderRadius:22,boxShad
 function App() {
   var [pg,setPg]=useState("home");
   var [qi,setQi]=useState(0),[qa,setQa]=useState([]),[qr,setQr]=useState(null),[pk,setPk]=useState(-1);
-  var [text,setText]=useState(""),[ctx,setCtx]=useState(""),[img,setImg]=useState(null),[imgN,setImgN]=useState("");
+  var [text,setText]=useState(""),[ctx,setCtx]=useState(""),[imgs,setImgs]=useState([]),[imgNames,setImgNames]=useState([]);
   var [step,setStep]=useState("input"),[res,setRes]=useState(null),[lm,setLm]=useState(""),[err,setErr]=useState(null);
   var [pType,setPType]=useState("");
   var [tarotCards,setTarotCards]=useState(null),[tarotRevealed,setTarotRevealed]=useState([false,false,false]),[synthesis,setSynthesis]=useState("");
 
-  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImg(null);setImgN("");setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
-  function resetInput(){setText("");setCtx("");setImg(null);setImgN("");setStep("input");setRes(null);setErr(null)}
+  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
+  function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
   function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
   function ansQ(i){setPk(i);setTimeout(function(){var n=[...qa,i];setQa(n);setPk(-1);if(qi<QUIZ.length-1)setQi(qi+1);else setQr(calcQuiz(n))},250)}
-  function handleImg(e){var f=e.target.files[0];if(!f)return;setImgN(f.name);var r=new FileReader();r.onload=function(ev){setImg(ev.target.result.split(",")[1])};r.readAsDataURL(f)}
+  function handleImg(e){
+    var files=Array.from(e.target.files);if(!files.length)return;
+    files.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(ev){
+        setImgs(function(prev){return prev.concat([ev.target.result.split(",")[1]])});
+        setImgNames(function(prev){return prev.concat([f.name])});
+      };
+      r.readAsDataURL(f);
+    });
+  }
 
   function startTarot(){setTarotCards(drawCards());setTarotRevealed([false,false,false]);setSynthesis(getSynthesis())}
   function revealCard(i){var n=[...tarotRevealed];n[i]=true;setTarotRevealed(n)}
 
   async function submit(){
-    if(!text.trim()&&!img)return;
+    if(!text.trim()&&!imgs.length)return;
     if((pg==="diagnose"||pg==="predict")&&step==="input"){setStep("context");return}
     setStep("loading");setErr(null);
     var mList={diagnose:["扫描互动模式","分析依恋信号","生成双人报告"],translate:["解码潜台词","翻译真实意图"],check:["评估杀伤力","模拟Ta反应"],predict:["扫描关系轨迹","模拟未来走向"]};
     var msgs=mList[pg]||mList.diagnose;var n=0;setLm(msgs[0]);
     var iv=setInterval(function(){n++;setLm(msgs[n%msgs.length])},1200);
     try{
-      var content=[];
-      if(img)content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:img}});
       var um="";
-      if(pg==="diagnose")um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"分析这张聊天截图");
+      if(pg==="diagnose")um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"请分析这些聊天记录截图");
       else if(pg==="translate")um="Ta说的话：\n"+text;
       else if(pg==="check")um="对方类型："+(pType?TI[pType].label:"未知")+"\n\n我想发："+text;
-      else um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"分析截图");
-      content.push({type:"text",text:um});
-      var r2=await callAI(P[pg],content);clearInterval(iv);setRes(r2);setStep("result");
+      else um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"请分析这些聊天记录截图");
+      var r2=await callAI(P[pg],um,imgs.length>0?imgs:null);clearInterval(iv);setRes(r2);setStep("result");
     }catch(e){clearInterval(iv);setErr(e.message||"出错了");setStep("input")}
   }
 
   var TABS=[{id:"quiz",label:"测试",icon:"🧪",c:"#FF922B"},{id:"diagnose",label:"确诊",icon:"🩺",c:C.wine},{id:"translate",label:"翻译",icon:"🔮",c:C.plum},{id:"check",label:"发不发",icon:"💊",c:C.sage},{id:"predict",label:"预测",icon:"🔭",c:"#5B8FB9"},{id:"tarot",label:"塔罗",icon:"🌙",c:C.gold}];
   var curC=(TABS.find(function(t){return t.id===pg})||{}).c||C.wine;
-  var hasInput=text.trim()||img;
+  var hasInput=text.trim()||imgs.length;
 
   return <div className="sans" style={{minHeight:"100vh",background:C.bg,paddingBottom:80}}>
     <style>{CSS}</style>
@@ -478,10 +488,16 @@ function App() {
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["avoidant","anxious","secure","disorganized"].map(function(k){return <button key={k} onClick={function(){setPType(k)}} className="sans" style={{padding:"9px 15px",borderRadius:14,border:pType===k?"2px solid "+TI[k].color:"2px solid "+C.line,background:pType===k?TI[k].bg:C.card,color:pType===k?TI[k].color:C.sub,fontSize:13,fontWeight:600,cursor:"pointer"}}>{TI[k].emoji} {TI[k].label}</button>})}</div>
         </div>}
         {(pg==="diagnose"||pg==="predict")&&<div style={{marginBottom:16}}>
-          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:16,borderRadius:16,border:"2px dashed "+(img?C.sage+"80":C.line),cursor:"pointer",color:img?C.sage:C.muted,fontSize:14,fontWeight:600,background:img?"#F0FFF4":C.bg,transition:"all .2s"}} className="sans">
-            <span style={{fontSize:22}}>{img?"✅":"📷"}</span>{img?imgN:"上传聊天截图"}
-            <input type="file" accept="image/*" onChange={handleImg} style={{display:"none"}}/>
+          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:16,borderRadius:16,border:"2px dashed "+(imgs.length?C.sage+"80":C.line),cursor:"pointer",color:imgs.length?C.sage:C.muted,fontSize:14,fontWeight:600,background:imgs.length?"#F0FFF4":C.bg,transition:"all .2s"}} className="sans">
+            <span style={{fontSize:22}}>{imgs.length?"📎":"📷"}</span>{imgs.length?imgs.length+"张截图已选择 · 点击继续添加":"上传聊天截图（可多选）"}
+            <input type="file" accept="image/*" multiple onChange={handleImg} style={{display:"none"}}/>
           </label>
+          {imgs.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+            {imgNames.map(function(name,i){return <span key={i} className="sans" style={{padding:"4px 10px",borderRadius:999,fontSize:11,background:"#F0FFF4",color:C.sage,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+              📷 {name.length>15?name.slice(0,15)+"...":name}
+              <span onClick={function(e){e.preventDefault();e.stopPropagation();setImgs(function(p){return p.filter(function(_,j){return j!==i})});setImgNames(function(p){return p.filter(function(_,j){return j!==i})})}} style={{cursor:"pointer",fontSize:14,color:"#ccc",marginLeft:2}}>×</span>
+            </span>})}
+          </div>}
           <div className="sans" style={{textAlign:"center",fontSize:12,color:C.muted,margin:"12px 0 6px"}}>—— 或 ——</div>
         </div>}
         <textarea className="sans" style={{width:"100%",padding:"14px 4px",background:"transparent",border:"none",color:C.ink,fontSize:15,lineHeight:1.9,resize:"none",outline:"none"}}
