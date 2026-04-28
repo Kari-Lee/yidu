@@ -250,12 +250,22 @@ function App() {
   function handleImg(e){
     var files=Array.from(e.target.files);if(!files.length)return;
     files.forEach(function(f){
-      var r=new FileReader();
-      r.onload=function(ev){
-        setImgs(function(prev){return prev.concat([ev.target.result.split(",")[1]])});
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement("canvas");
+        var maxW=1200,maxH=1200;
+        var w=img.width,h=img.height;
+        if(w>maxW){h=h*(maxW/w);w=maxW;}
+        if(h>maxH){w=w*(maxH/h);h=maxH;}
+        canvas.width=w;canvas.height=h;
+        var ctx2=canvas.getContext("2d");
+        ctx2.drawImage(img,0,0,w,h);
+        var compressed=canvas.toDataURL("image/jpeg",0.6).split(",")[1];
+        setImgs(function(prev){return prev.concat([compressed])});
         setImgNames(function(prev){return prev.concat([f.name])});
+        URL.revokeObjectURL(img.src);
       };
-      r.readAsDataURL(f);
+      img.src=URL.createObjectURL(f);
     });
   }
 
