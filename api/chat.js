@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
     if (body.images && body.images.length > 0) {
       var userContent = [];
       body.images.forEach(function(img) {
-        userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img } });
+        userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img, detail: "low" } });
       });
       userContent.push({ type: "text", text: body.message || "请分析这些聊天记录截图" });
       messages.push({ role: "user", content: userContent });
