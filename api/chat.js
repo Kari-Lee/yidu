@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
 
   var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
-  var baseUrl = process.env.API_BASE_URL || "https://api.apiyi.com";
+  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com/v1";
 
   try {
     var body = req.body;
@@ -16,10 +16,13 @@ module.exports = async function handler(req, res) {
 
     if (body.images && body.images.length > 0) {
       var userContent = [];
+      userContent.push({ type: "text", text: body.message || "请仔细分析这些聊天记录截图中的对话内容" });
       body.images.forEach(function(img) {
-        userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img, detail: "low" } });
+        userContent.push({
+          type: "image_url",
+          image_url: { url: "data:image/jpeg;base64," + img }
+        });
       });
-      userContent.push({ type: "text", text: body.message || "请分析这些聊天记录截图" });
       messages.push({ role: "user", content: userContent });
     } else {
       messages.push({ role: "user", content: body.message });
@@ -32,7 +35,7 @@ module.exports = async function handler(req, res) {
         "Authorization": "Bearer " + apiKey,
       },
       body: JSON.stringify({
-        model: "MiniMax-M2.5",
+        model: "MiniMax-M2.7",
         max_tokens: 4096,
         messages: messages,
       }),
