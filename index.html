@@ -81,7 +81,8 @@ const QUOTES = [
   "回避型分手后：终于自由了。三天后：有点想Ta了。一周后：算了不想了",
   "你不是恋爱脑，是焦虑型依恋在控制你的大脑",
 ];
-const DAILY = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+var _today = new Date(); var _seed = _today.getFullYear() * 10000 + (_today.getMonth()+1) * 100 + _today.getDate();
+const DAILY = QUOTES[_seed % QUOTES.length];
 
 const QUIZ = [
   { q: "Ta没回消息过了2小时，你会？", a: ["反复看手机越来越焦虑", "告诉自己Ta在忙但心里不舒服", "该干嘛干嘛等Ta回", "先生气然后又担心Ta出事了"] },
@@ -104,13 +105,17 @@ const QUIZ = [
   { q: "你理想中的关系距离是？", a: ["黏在一起每件事都分享", "各自独立有各自的生活圈", "亲密但有边界", "忽远忽近说不准今天想黏明天想逃"] },
   { q: "Ta夸你「你今天好好看」你会？", a: ["开心但马上想那平时呢", "有点不好意思想转移话题", "谢谢开心地接受", "先开心然后怀疑Ta是不是有事求我"] },
   { q: "如果用一句话形容你在感情中的样子：", a: ["我在门口等你回来的灯", "我是你走不进来的城堡", "我是和你一起晒太阳的猫", "我是一会开门一会关门的风"] },
+  { q: "半夜三点你突然很想Ta，你会？", a: ["立刻发消息忍不住", "翻一下聊天记录但不发消息", "记在心里明天告诉Ta", "打了一段话又删掉反复几次最后锁屏"] },
+  { q: "Ta在朋友面前没提你，你会？", a: ["很受伤觉得Ta不重视这段关系", "觉得正常没必要到处宣传", "无所谓Ta私下对你好就行", "先觉得没什么后来越想越不对劲"] },
+  { q: "你们第一次说「我喜欢你」是？", a: ["你先说的你忍不住", "Ta先说的你不敢先开口", "水到渠成双方都自然表达", "到现在也没正式说过但好像在一起了"] },
+  { q: "Ta看手机时笑了一下，你会？", a: ["想知道在看什么在跟谁聊", "不关心尊重隐私", "随口问一句怎么了这么开心", "表面没反应心里已经编了三集电视剧"] },
 ];
 const TMAP = ["anxious", "avoidant", "secure", "disorganized"];
 const TI = {
-  anxious: { label: "焦虑型", emoji: "🔥", color: C.rose, grad: "linear-gradient(135deg,#E8A0BF,#D4847C,#C4616C)", bg: "#FFF5F3", desc: "你爱得太用力了", traits: ["需要反复确认","害怕被抛弃","对冷淡极度敏感"], detail: "你像一个24小时待命的消防员，随时准备扑灭「Ta不爱我了」的火。", advice: "下次想发第三条消息追问的时候，先放下手机，深呼吸。" },
-  avoidant: { label: "回避型", emoji: "🧊", color: "#5B8FB9", grad: "linear-gradient(135deg,#8ECAE6,#5B8FB9,#3A6D8C)", bg: "#F0F6FA", desc: "你爱的方式是后退", traits: ["需要大量空间","情感表达困难","一亲近就想逃"], detail: "你有一个隐形的盾牌，一旦有人靠得太近就会本能地往后退。", advice: "下次想说「我没事」的时候，试着改成「我需要一点时间，但我不是在疏远你」。" },
-  secure: { label: "安全型", emoji: "🌿", color: C.sage, grad: "linear-gradient(135deg,#A7C4BC,#6B9080,#4A7C6F)", bg: "#F0F7F4", desc: "恭喜你，情感模范生", traits: ["情绪稳定","能直接表达需求","不怕冲突"], detail: "你是亲密关系里的稀有物种。你能表达爱也能接受爱。", advice: "继续保持。你的存在本身就是对焦虑型和回避型的治愈。" },
-  disorganized: { label: "混乱型", emoji: "🌀", color: C.plum, grad: "linear-gradient(135deg,#C4B1DB,#7B6BA8,#5C4D8A)", bg: "#F5F0FA", desc: "连你自己都不知道你要什么", traits: ["又想靠近又想逃","情绪大起大落","又渴望又恐惧"], detail: "你的内心住着两个人：一个疯狂想要爱，另一个拼命想逃跑。", advice: "你的矛盾不是性格缺陷，是过去的关系留下的印记。" },
+  anxious: { label: "焦虑型", emoji: "🔥", color: C.rose, grad: "linear-gradient(135deg,#E8A0BF,#D4847C,#C4616C)", bg: "#FFF5F3", desc: "恋爱中的人形追踪器", traits: ["已读不回就心梗","需要24小时情绪直播","把安全感外包给别人"], detail: "你的恋爱模式是：Ta回消息你就是世界上最幸福的人，Ta不回你就开始写遗书。你不是在谈恋爱，你是在考核Ta的KPI——回复速度、语气热度、表情包含量，每一项都要打分。你手机里有一个文件夹专门截图Ta说过的甜言蜜语，低落的时候反复翻看，像一个守财奴数金币。你最大的才华是在对方还没做任何事的时候就把自己伤透了。你发的每条消息都在等回复，你的每次心跳都在等确认。", advice: "你的安全感不应该是一个需要别人每天给你充电的手机。试试把注意力放回自己身上——你在Ta出现之前也活得好好的，别忘了。下次想发第三条追问消息的时候，放下手机去洗个澡，出来如果Ta还没回，再去做个面膜。" },
+  avoidant: { label: "回避型", emoji: "🧊", color: "#5B8FB9", grad: "linear-gradient(135deg,#8ECAE6,#5B8FB9,#3A6D8C)", bg: "#F0F6FA", desc: "感情中的专业逃跑运动员", traits: ["一亲近就窒息","把冷漠包装成独立","关门速度比开门快"], detail: "你谈恋爱就像逛超市：看看可以，别让我买单。一旦有人真的靠近你，你体内的警报系统就会启动——「太近了太近了太近了」。你不是不会爱，你只是把爱当成了一种会让你失控的危险品。你最擅长的事是在关系升温的时候踩刹车，然后告诉自己「我只是需要空间」。你的空间大到可以停航母。分手的时候你比谁都洒脱，但三个月后的某个深夜你会突然想起Ta——然后翻个身继续睡。", advice: "你以为的独立其实是恐惧穿了一件很酷的外套。试着在下次想逃跑的时候，不是真的逃，而是告诉Ta「我现在有点不舒服，但不是因为你」。说出来不会死，但不说可能真的会一个人死。" },
+  secure: { label: "安全型", emoji: "🌿", color: C.sage, grad: "linear-gradient(135deg,#A7C4BC,#6B9080,#4A7C6F)", bg: "#F0F7F4", desc: "你到底是怎么做到的", traits: ["情绪稳定得像NPC","不作不闹不猜忌","让其他类型自愧不如"], detail: "你是亲密关系里的大熊猫——稀有、珍贵、人人都说好但很少有人真正见过。Ta不回消息你不会崩溃，Ta要独处你不会多想，吵架了你还能理性沟通？？？你确定你是人类吗？你的存在让其他三种类型的人感到深深的嫉妒和困惑。你可能是在一个充满爱和安全感的家庭长大的，也可能是做了很多自我成长——不管哪种，你都欠其他人一个教程。", advice: "你几乎不需要什么建议。但记住：安全型不代表没有需求。你也可以示弱，也可以撒娇，也可以偶尔无理取闹一下。别总当那个「懂事的人」，懂事久了会内伤。" },
+  disorganized: { label: "混乱型", emoji: "🌀", color: C.plum, grad: "linear-gradient(135deg,#C4B1DB,#7B6BA8,#5C4D8A)", bg: "#F5F0FA", desc: "爱情里的薛定谔的猫", traits: ["上午520下午再见","渴望亲密又恐惧亲密","连自己都猜不透自己"], detail: "你的恋爱状态是量子态——在「我超爱Ta」和「我要逃跑」之间不断坍缩。早上你觉得Ta就是你的灵魂伴侣，下午你就在想分手后的单身生活。你不是善变，你是内心有两个小人在24小时打架，而且打得旗鼓相当谁也赢不了。你的前任们最崩溃的一点是：永远不知道今天醒来的你是天使版还是恶魔版。你最大的问题不是不爱，是爱得太复杂连你自己都解不开。", advice: "首先你不是坏人也不是疯子，你只是在过去的关系里学会了一种很拧巴的爱的方式。建议认真考虑找一个心理咨询师——不是因为你有病，是因为你值得有人帮你把内心那两个打架的小人调解一下。在那之前，做任何冲动决定之前，给自己24小时冷静期。" },
 };
 
 /* ═══ TAROT ═══ */
@@ -133,14 +138,14 @@ const TAROT = [
 ];
 
 var SYNTH = [
-  "过去的经历正在深刻影响你现在的选择。你以为你已经放下了，但牌面显示那些旧伤口还在暗中指引你的行为模式。",
-  "三张牌之间存在明显的能量递进。你正在从一个旧的关系模式中觉醒，但蜕变的过程不会舒适。",
-  "过去和未来的牌形成了对照。你内心最深处知道自己想要什么，但恐惧让你不断重复旧的模式。",
-  "现在这张牌是关键转折点。你正站在十字路口，接下来的选择将决定未来三个月的走向。",
-  "这组牌暗示着一个循环即将被打破。你在这段关系中学到的功课已经接近完成，不管结果如何。",
-  "三张牌的能量都指向内在——这不是关于Ta怎么做的问题，而是关于你如何面对自己的问题。",
-  "牌面显示外在的变化即将到来，但真正的转变需要从你的内心开始。宇宙已经准备好了，你呢？",
-  "过去的伤痛和未来的希望在现在交汇。这一刻你做的每一个选择，都在重新书写结局。",
+  "过去的经历正在深刻影响你现在的选择。你以为你已经放下了，但牌面显示那些旧伤口还在暗中指引你的行为模式。你现在对Ta的某些反应——那些不合理的恐惧、过度的期待、莫名的不安——很可能不是Ta造成的，而是过去某段关系留下的残影。好消息是，觉察就是治愈的第一步。",
+  "三张牌之间存在明显的能量递进。你正在从一个旧的关系模式中觉醒，但蜕变的过程不会舒适。就像蛇蜕皮一样，你正在剥离那些不再适合你的旧习惯和旧信念。这个过程可能伴随着痛苦和迷茫，但请相信——新的皮肤已经在旧皮肤下面长好了。",
+  "过去和未来的牌形成了强烈对照。你内心最深处知道自己想要什么，但恐惧让你不断重复旧的模式。这就像你站在一扇门前，明明知道门后面是你想要的，但你的手就是不敢推。牌面在告诉你：推开它。最坏的结果不过是回到原点，但最好的结果可能是你从未想象过的。",
+  "现在这张牌是关键转折点。你正站在十字路口，接下来两到三周内的选择将决定未来三个月的走向。不是让你草率决定，而是让你注意——生活正在向你抛出一个信号，别错过它。有时候宇宙给你的窗口期很短，犹豫太久窗口就关上了。",
+  "这组牌暗示着一个循环即将被打破。你在这段关系中学到的功课已经接近完成。不管最终的结局是在一起还是分开，你都将以一个不同的、更完整的人的身份走出来。这段经历不是白费的——你正在毕业。",
+  "三张牌的能量都指向内在——这不是关于Ta怎么做的问题，而是关于你如何面对自己的问题。你一直在等Ta改变、等Ta给你答案、等Ta先迈出那一步。但牌面说得很清楚：你等的那个人其实是你自己。当你不再把自己的幸福绑定在Ta的行为上，一切都会开始松动。",
+  "牌面显示外在的变化即将到来，但真正的转变需要从你的内心开始。宇宙已经准备好了，但你还在犹豫。你害怕的不是失去Ta，而是失去那个「有Ta的自己」。问问自己：如果明天Ta不在了，你还认识镜子里那个人吗？如果答案是犹豫的，那你知道该先做什么了。",
+  "过去的伤痛和未来的希望在现在交汇。这一刻你做的每一个选择，都在重新书写结局。你不需要做什么惊天动地的大事——有时候一句真诚的话、一个拥抱、或者一个勇敢的决定，就足以改变整个轨迹。牌面提醒你：别低估小选择的力量。",
 ];
 
 function drawCards() {
@@ -229,10 +234,11 @@ function App() {
   var [step,setStep]=useState("input"),[res,setRes]=useState(null),[lm,setLm]=useState(""),[err,setErr]=useState(null);
   var [pType,setPType]=useState("");
   var [tarotCards,setTarotCards]=useState(null),[tarotRevealed,setTarotRevealed]=useState([false,false,false]),[synthesis,setSynthesis]=useState("");
+  var [tarotPool,setTarotPool]=useState(null),[tarotStep,setTarotStep]=useState("intro"),[tarotPicked,setTarotPicked]=useState([]);
 
-  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
+  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([])}
   function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
-  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("")}
+  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([])}
   function ansQ(i){setPk(i);setTimeout(function(){var n=[...qa,i];setQa(n);setPk(-1);if(qi<QUIZ.length-1)setQi(qi+1);else setQr(calcQuiz(n))},250)}
   function handleImg(e){
     var files=Array.from(e.target.files);if(!files.length)return;
@@ -246,7 +252,22 @@ function App() {
     });
   }
 
-  function startTarot(){setTarotCards(drawCards());setTarotRevealed([false,false,false]);setSynthesis(getSynthesis())}
+  function startTarot(){
+    var shuffled=[].concat(TAROT).sort(function(){return Math.random()-.5}).slice(0,9);
+    shuffled=shuffled.map(function(c){return Object.assign({},c,{reversed:Math.random()>.6})});
+    setTarotPool(shuffled);setTarotStep("pick");setTarotPicked([]);setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis(getSynthesis());
+  }
+  function pickCard(idx){
+    if(tarotPicked.length>=3||tarotPicked.indexOf(idx)!==-1)return;
+    var newPicked=tarotPicked.concat([idx]);
+    setTarotPicked(newPicked);
+    if(newPicked.length===3){
+      var labels=["过去","现在","未来"];
+      var descs=["影响你现在的根源","你当前的状态与能量","即将到来的趋势"];
+      var picked=newPicked.map(function(pi,i){return Object.assign({},tarotPool[pi],{pos:labels[i],posDesc:descs[i]})});
+      setTarotCards(picked);setTarotStep("reveal");
+    }
+  }
   function revealCard(i){var n=[...tarotRevealed];n[i]=true;setTarotRevealed(n)}
 
   async function submit(){
@@ -363,8 +384,11 @@ function App() {
 
     {/* ═══ QUIZ ═══ */}
     {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-        <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"4px 10px",borderRadius:8,background:C.bg,color:C.sub,fontSize:12,fontWeight:600}}>‹ 上一题</button>}
+          <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
+        </div>
         <span className="sans" style={{fontSize:12,color:C.muted}}>{qi+1}/{QUIZ.length}</span>
       </div>
       <div style={{height:3,background:C.line,borderRadius:99,overflow:"hidden",marginBottom:24}}>
@@ -394,17 +418,58 @@ function App() {
 
     {/* ═══ TAROT ═══ */}
     {pg==="tarot"&&<div style={{animation:"fu .5s ease"}}>
-      {!tarotCards&&<div style={{textAlign:"center"}}>
+      {/* Intro */}
+      {tarotStep==="intro"&&<div style={{textAlign:"center"}}>
         <div style={{background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",borderRadius:28,padding:"48px 28px",color:"#fff",position:"relative",overflow:"hidden",marginBottom:20}}>
           <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 30% 40%,rgba(196,155,106,.15),transparent 50%),radial-gradient(circle at 70% 60%,rgba(123,107,168,.15),transparent 50%)"}}/>
           <div style={{fontSize:72,marginBottom:16,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
           <div className="serif" style={{fontSize:28,fontWeight:700,marginBottom:8,position:"relative"}}>塔罗牌占卜</div>
-          <div className="sans" style={{fontSize:14,opacity:.7,position:"relative",lineHeight:1.7}}>抽三张牌<br/>过去 · 现在 · 未来</div>
+          <div className="sans" style={{fontSize:14,opacity:.7,position:"relative",lineHeight:1.7}}>从牌堆中凭直觉选出三张牌<br/>过去 · 现在 · 未来</div>
         </div>
         <button onClick={startTarot} className="sans" style={{width:"100%",padding:18,borderRadius:18,border:"none",fontSize:17,fontWeight:700,color:"#fff",cursor:"pointer",background:"linear-gradient(135deg,"+C.gold+","+C.wine+")",boxShadow:"0 8px 30px "+C.wine+"30",animation:"glow 3s ease infinite"}}>开始抽牌 ✨</button>
       </div>}
 
-      {tarotCards&&<div>
+      {/* Pick cards */}
+      {tarotStep==="pick"&&tarotPool&&<div>
+        <div className="serif" style={{textAlign:"center",fontSize:16,color:C.ink,marginBottom:6}}>凭直觉选择三张牌</div>
+        <div className="sans" style={{textAlign:"center",fontSize:13,color:C.sub,marginBottom:20}}>
+          {tarotPicked.length===0?"第一张 · 代表过去":tarotPicked.length===1?"第二张 · 代表现在":tarotPicked.length===2?"第三张 · 代表未来":"✨ 选择完成"}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
+          {tarotPool.map(function(card,i){
+            var isPicked=tarotPicked.indexOf(i)!==-1;
+            var pickOrder=tarotPicked.indexOf(i);
+            var labels=["过去","现在","未来"];
+            return <div key={i} onClick={function(){pickCard(i)}} style={{
+              cursor:isPicked||tarotPicked.length>=3?"default":"pointer",
+              opacity:isPicked?.5:1,
+              transition:"all .3s ease",
+              transform:isPicked?"scale(.92)":"scale(1)",
+            }}>
+              <div style={{
+                borderRadius:16,padding:"28px 12px",
+                background:isPicked?"linear-gradient(160deg,"+C.warm+",#F0E6F6)":"linear-gradient(160deg,#2D2A32,#4A3F5C)",
+                border:isPicked?"2px solid "+C.gold:"2px solid rgba(196,155,106,.2)",
+                textAlign:"center",minHeight:120,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                boxShadow:isPicked?"0 4px 16px rgba(196,155,106,.15)":"0 4px 20px rgba(45,42,50,.12)",
+              }}>
+                {!isPicked&&<div>
+                  <div style={{fontSize:32,marginBottom:6,opacity:.5}}>🌙</div>
+                  <div className="sans" style={{fontSize:10,color:"rgba(255,255,255,.35)",letterSpacing:1}}>{i+1}</div>
+                </div>}
+                {isPicked&&<div>
+                  <div style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:2}} className="sans">{labels[pickOrder]}</div>
+                  <div style={{fontSize:24,margin:"6px 0"}}>✦</div>
+                  <div className="sans" style={{fontSize:10,color:C.sub}}>已选择</div>
+                </div>}
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>}
+
+      {/* Reveal cards */}
+      {tarotStep==="reveal"&&tarotCards&&<div>
         <div className="serif" style={{textAlign:"center",fontSize:14,color:C.gold,fontStyle:"italic",marginBottom:20}}>点击卡牌翻开</div>
         <div style={{display:"flex",gap:12,marginBottom:24}}>
           {tarotCards.map(function(card,i){
@@ -418,11 +483,9 @@ function App() {
                 textAlign:"center",minHeight:180,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
                 transition:"all .4s ease",
                 boxShadow:revealed?"0 8px 30px rgba(45,42,50,.08)":"0 4px 20px rgba(45,42,50,.15)",
-                animation:revealed?"fu .4s ease":"none",
-                transform:card.reversed&&revealed?"rotate(180deg)":"none",
               }}>
                 {!revealed&&<div><div style={{fontSize:40,marginBottom:8,opacity:.6}}>🌙</div><div className="serif" style={{fontSize:12,color:"rgba(255,255,255,.4)",fontStyle:"italic"}}>tap to reveal</div></div>}
-                {revealed&&<div style={{transform:card.reversed?"rotate(180deg)":"none"}}>
+                {revealed&&<div>
                   <div style={{fontSize:36,marginBottom:8}}>{card.icon}</div>
                   <div className="serif" style={{fontSize:16,fontWeight:700,color:C.ink,marginBottom:4}}>{card.name}</div>
                   <div className="sans" style={{fontSize:10,color:card.reversed?C.rose:C.gold,fontWeight:700,letterSpacing:1}}>{card.reversed?"逆位":"正位"}</div>
@@ -444,7 +507,6 @@ function App() {
           {tarotCards.map(function(card,i){
             var reading = card.reversed ? card.rev : card.up;
             return <div key={i} style={{...sec,marginBottom:14,overflow:"hidden"}}>
-              {/* Card Header */}
               <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,paddingBottom:16,borderBottom:"1px solid "+C.line}}>
                 <div style={{width:52,height:52,borderRadius:16,background:card.reversed?"linear-gradient(135deg,#FFE3E3,#FFC9C9)":"linear-gradient(135deg,"+C.warm+",#FFF3E0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{card.icon}</div>
                 <div style={{flex:1}}>
@@ -456,17 +518,11 @@ function App() {
                   <div className="sans" style={{fontSize:10,color:C.muted,marginTop:2}}>{card.num} · {card.element}</div>
                 </div>
               </div>
-
-              {/* Main Reading */}
               <div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD",marginBottom:16}}>{reading}</div>
-
-              {/* Love Advice */}
               <div style={{padding:"14px 18px",background:card.reversed?"#FFF5F3":C.warm,borderRadius:14,marginBottom:12,borderLeft:"3px solid "+(card.reversed?C.rose:C.gold)}}>
                 <div className="sans" style={{fontSize:12,fontWeight:700,color:card.reversed?C.rose:C.gold,marginBottom:4}}>💕 感情启示</div>
                 <div className="serif" style={{fontSize:14,fontWeight:400,color:C.ink,fontStyle:"italic",lineHeight:1.7}}>{card.love}</div>
               </div>
-
-              {/* Details Grid */}
               <div style={{display:"flex",gap:10}}>
                 <div style={{flex:1,padding:"12px 14px",background:C.bg,borderRadius:12}}>
                   <div className="sans" style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:4,letterSpacing:1}}>能量</div>
@@ -477,8 +533,6 @@ function App() {
                   <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{card.timing}</div>
                 </div>
               </div>
-
-              {/* Action */}
               <div style={{marginTop:12,padding:"14px 18px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:14}}>
                 <div className="sans" style={{fontSize:12,fontWeight:700,color:C.plum,marginBottom:4}}>✦ 行动指引</div>
                 <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{card.action}</div>
@@ -486,7 +540,6 @@ function App() {
             </div>
           })}
 
-          {/* Share & Restart */}
           <div style={{marginTop:8,textAlign:"center"}}><span className="sans" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:999,background:"linear-gradient(135deg,"+C.gold+"15,"+C.plum+"15)",fontSize:13,color:C.sub}}>📱 截图分享你的牌阵</span></div>
           <button onClick={startTarot} className="sans" style={{width:"100%",marginTop:14,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重新抽牌 ↻</button>
         </div>}
