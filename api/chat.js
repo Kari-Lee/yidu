@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "MiniMax-M2.5",
-        max_tokens: 2048,
+        max_tokens: 8192,
         messages: messages,
       }),
     });
