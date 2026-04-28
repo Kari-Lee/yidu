@@ -175,21 +175,28 @@ async function callAI(sys, message, images) {
   var d = await r.json();
   if (!r.ok) throw new Error(d.error || "API error");
   var raw = d.text || "";
-  // Clean up: remove markdown fences
-  raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
-  // Extract JSON object or array from messy text
-  var start = raw.indexOf("{");
-  var startArr = raw.indexOf("[");
-  if (startArr !== -1 && (start === -1 || startArr < start)) start = startArr;
-  if (start === -1) throw new Error("无法解析AI回复");
-  var depth = 0; var end = -1; var isArr = raw[start] === "[";
-  var open = isArr ? "[" : "{"; var close = isArr ? "]" : "}";
-  for (var i = start; i < raw.length; i++) {
-    if (raw[i] === open) depth++;
-    else if (raw[i] === close) { depth--; if (depth === 0) { end = i + 1; break; } }
+  // Clean markdown fences
+  raw = raw.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+  // Strategy 1: try direct parse
+  try { return JSON.parse(raw); } catch(e) {}
+  // Strategy 2: find first { and last }
+  var first = raw.indexOf("{");
+  var last = raw.lastIndexOf("}");
+  if (first !== -1 && last > first) {
+    try { return JSON.parse(raw.substring(first, last + 1)); } catch(e) {}
   }
-  if (end === -1) throw new Error("AI回复格式不完整");
-  return JSON.parse(raw.substring(start, end));
+  // Strategy 3: find first [ and last ]
+  var firstA = raw.indexOf("[");
+  var lastA = raw.lastIndexOf("]");
+  if (firstA !== -1 && lastA > firstA) {
+    try { return JSON.parse(raw.substring(firstA, lastA + 1)); } catch(e) {}
+  }
+  // Strategy 4: try fixing common issues - unescaped newlines
+  if (first !== -1 && last > first) {
+    var attempt = raw.substring(first, last + 1).replace(/[\n\r\t]/g," ");
+    try { return JSON.parse(attempt); } catch(e) {}
+  }
+  throw new Error("AI回复格式异常，请重试");
 }
 
 function calcQuiz(ans) {
