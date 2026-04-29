@@ -366,7 +366,7 @@ function App() {
 
     {/* ═══ BACK + TABS ═══ */}
     {pg!=="home"&&<div style={{maxWidth:500,margin:"0 auto",padding:"10px 16px 0"}}>
-      <div onClick={goHome} className="sans" style={{display:"inline-block",padding:"8px 0",marginBottom:8,color:"#4A6FA5",fontSize:15,fontWeight:700,cursor:"pointer"}}>{"< 返回首页"}</div>
+      <div onClick={goHome} className="sans" style={{display:"inline-block",padding:"8px 0",marginBottom:8,color:"#4A6FA5",fontSize:15,fontWeight:700,cursor:"pointer"}}>{"\u2190 \u8FD4\u56DE\u9996\u9875"}</div>
     </div>}
     {pg!=="home"&&<div style={{display:"flex",gap:6,padding:"4px 16px 20px",justifyContent:"center",flexWrap:"wrap",maxWidth:500,margin:"0 auto"}}>
       {TABS.map(function(t){var on=pg===t.id;return <button key={t.id} onClick={function(){go(t.id)}} style={{padding:"8px 14px",borderRadius:999,border:on?"none":"1px solid "+C.line,background:on?t.c:C.card,color:on?"#fff":C.sub,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:on?"0 4px 14px "+t.c+"40":"0 1px 3px rgba(0,0,0,.04)",transition:"all .2s"}}><span style={{fontSize:13}}>{t.icon}</span>{t.label}</button>})}
@@ -434,7 +434,7 @@ function App() {
     {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"4px 10px",borderRadius:8,background:C.bg,color:C.sub,fontSize:12,fontWeight:600}}>‹ 上一题</button>}
+          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"4px 10px",borderRadius:8,background:C.bg,color:C.sub,fontSize:12,fontWeight:600}}>{"\u2039 \u4E0A\u4E00\u9898"}</button>}
           <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
         </div>
         <span className="sans" style={{fontSize:12,color:C.muted}}>{qi+1}/{QUIZ.length}</span>
