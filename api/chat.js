@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
 
   var apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
-  var baseUrl = process.env.API_BASE_URL || "https://api.minimaxi.com/v1";
+  var baseUrl = process.env.API_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
   try {
     var body = req.body;
@@ -38,6 +38,7 @@ module.exports = async function handler(req, res) {
         model: "qwen-vl-max-latest",
         max_tokens: 16000,
         messages: messages,
+        extra_body: { enable_thinking: false },
       }),
     });
 
