@@ -366,7 +366,7 @@ function App() {
 
     {/* ═══ BACK + TABS ═══ */}
     {pg!=="home"&&<div style={{maxWidth:500,margin:"0 auto",padding:"10px 16px 0"}}>
-      <div onClick={goHome} className="sans" style={{display:"inline-block",padding:"8px 0",marginBottom:8,color:"#4A6FA5",fontSize:15,fontWeight:700,cursor:"pointer"}}>{"\u2190 \u8FD4\u56DE\u9996\u9875"}</div>
+      <button onClick={goHome} style={{padding:"12px 24px",marginBottom:12,background:"#4A6FA5",color:"#fff",fontSize:16,fontWeight:800,borderRadius:12,border:"none",boxShadow:"0 2px 8px rgba(74,111,165,.3)",cursor:"pointer"}}>&#8592; Back Home</button>
     </div>}
     {pg!=="home"&&<div style={{display:"flex",gap:6,padding:"4px 16px 20px",justifyContent:"center",flexWrap:"wrap",maxWidth:500,margin:"0 auto"}}>
       {TABS.map(function(t){var on=pg===t.id;return <button key={t.id} onClick={function(){go(t.id)}} style={{padding:"8px 14px",borderRadius:999,border:on?"none":"1px solid "+C.line,background:on?t.c:C.card,color:on?"#fff":C.sub,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:on?"0 4px 14px "+t.c+"40":"0 1px 3px rgba(0,0,0,.04)",transition:"all .2s"}}><span style={{fontSize:13}}>{t.icon}</span>{t.label}</button>})}
