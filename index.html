@@ -364,17 +364,12 @@ function App() {
       </div>
     </div>
 
-    {/* ═══ TABS + BACK ═══ */}
-    {pg!=="home"&&<div style={{maxWidth:500,margin:"0 auto"}}>
-      <div style={{display:"flex",gap:6,padding:"4px 20px 10px",justifyContent:"center",flexWrap:"wrap"}}>
-        {TABS.map(function(t){var on=pg===t.id;return <button key={t.id} onClick={function(){go(t.id)}} style={{padding:"8px 14px",borderRadius:999,border:on?"none":"1px solid "+C.line,background:on?t.c:C.card,color:on?"#fff":C.sub,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:on?"0 4px 14px "+t.c+"40":"0 1px 3px rgba(0,0,0,.04)",transition:"all .2s"}}><span style={{fontSize:13}}>{t.icon}</span>{t.label}</button>})}
-      </div>
-      <div style={{padding:"0 20px 12px"}}>
-        <span onClick={goHome} style={{fontSize:13,color:"#4A6FA5",fontWeight:600,cursor:"pointer"}}>
-          <span style={{marginRight:4}}>{"<"}</span>
-          <span>{String.fromCharCode(36820,22238,39318,39029)}</span>
-        </span>
-      </div>
+    {/* ═══ BACK ═══ */}
+    {pg!=="home"&&<div style={{maxWidth:500,margin:"0 auto",padding:"0 20px 12px"}}>
+      <span onClick={goHome} style={{fontSize:13,color:"#4A6FA5",fontWeight:600,cursor:"pointer"}}>
+        <span style={{marginRight:4}}>{"<"}</span>
+        <span>{String.fromCharCode(36820,22238,39318,39029)}</span>
+      </span>
     </div>}
 
     <div style={{padding:"0 16px",maxWidth:500,margin:"0 auto"}}>
