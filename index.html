@@ -14,8 +14,11 @@ body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#f
 .sf,.serif{font-family:'Playfair Display',Georgia,serif}
 button{font-family:inherit;cursor:pointer;border:none}
 textarea{font-family:inherit;display:block}
-textarea:focus{outline:none}
-textarea::placeholder{color:#9CA8B8}
+input{font-family:inherit}
+input:focus,textarea:focus{outline:none}
+textarea::placeholder,input::placeholder{color:#9CA8B8}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
 @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -273,6 +276,93 @@ function EntryCard({icon,bg,title,sub,onClick}) {
 
 var sec = {marginTop:16,padding:"24px",background:C.card,borderRadius:20,boxShadow:"0 2px 20px rgba(26,31,54,.04)",border:"1px solid "+C.line};
 
+/* ═══ LOVE ORACLE (月老灵签) ═══ */
+var QIAN = [
+  {rank:"上上",poem:"月老红线早已牵，只等佳期在眼前。莫问前程多少路，回头便是有缘人。",read:"你等的人也在等你，但你们都在等对方先开口——所以赶紧开口。",guide:"主动出击，这次老天站你这边。",yi:"表白、约会、发那条编辑了三遍的消息",ji:"犹豫、已读不回、假装不在乎"},
+  {rank:"上上",poem:"鸳鸯戏水不知寒，并蒂莲开两心欢。若问姻缘何处觅，低头便见月中人。",read:"缘分就在身边，你只是一直在远处找。可能是你忽略的那个人，一直在等你转身。",guide:"看看身边，答案比你想的近。",yi:"留意身边人、接受邀约、认真回忆谁对你最好",ji:"好高骛远、网恋、在社交媒体上找真爱"},
+  {rank:"上",poem:"春风得意正当时，桃花一枝入梦来。且将心事付流水，自有佳人伴月归。",read:"桃花运正旺，但别得意忘形。来的人多不代表对的人多，擦亮眼睛。",guide:"享受被喜欢的感觉，但别急着做选择。",yi:"社交、认识新朋友、打扮自己",ji:"脚踏两只船、暧昧成瘾、撩完就跑"},
+  {rank:"上",poem:"久旱逢甘雨，他乡遇故知。洞房花烛夜，金榜题名时。",read:"等了很久的好消息要来了。可能是Ta的态度软化，可能是一个意外的重逢。",guide:"保持耐心，好事将近。",yi:"等待、保持现状、相信时间",ji:"催促、逼问、给最后通牒"},
+  {rank:"上",poem:"云开月出照人间，守得花开满庭芳。回首来路虽坎坷，前方尽是好风光。",read:"之前受的苦不是白受的，它们都在为现在铺路。你快要走出低谷了。",guide:"坚持住，转机就在下一个路口。",yi:"坚持、自我疗愈、给自己时间",ji:"自暴自弃、报复性恋爱、借酒消愁"},
+  {rank:"中上",poem:"花开半夏正芬芳，缘来缘去莫彷徨。今日且将心事了，明朝又是好时光。",read:"感情状态还不错，但还没到最好的时候。别着急定义关系，让它自然发展。",guide:"享受暧昧期，这是最美的阶段。",yi:"慢慢来、保持神秘感、做自己",ji:"追问关系定义、查岗、翻旧账"},
+  {rank:"中上",poem:"两情若是长久时，又岂在朝朝暮暮。且看风轻云淡处，自有真心一片来。",read:"异地或聚少离多不是问题，心在就行。但如果心不在了，天天在一起也没用。",guide:"关注质量不是频率。",yi:"深度对话、分享内心、信任对方",ji:"查岗、夺命连环call、计较回复速度"},
+  {rank:"中",poem:"半喜半忧在心头，且行且看且珍重。莫道前路多迷雾，柳暗花明又一村。",read:"现在的局面不好不坏，关键看你接下来怎么走。有机会但也有风险。",guide:"谨慎乐观，走一步看一步。",yi:"观察、思考、保持冷静",ji:"冲动表白、吵架、做重大决定"},
+  {rank:"中",poem:"镜中花水中月，看似有情却无缘。莫被表象迷了眼，静待真心自然来。",read:"你喜欢的可能不是真实的Ta，而是你想象中的Ta。摘下滤镜看看真实的样子。",guide:"分清现实和幻想。",yi:"理性分析、听朋友的意见、面对真相",ji:"自我感动、过度美化对方、忽略红旗"},
+  {rank:"中",poem:"行船莫怕逆风来，心正何愁路不开。今日虽有小波折，大船终将到彼岸。",read:"会有一些小摩擦和误会，但不是致命的。处理好了反而会让你们更近一步。",guide:"把冲突当成了解彼此的机会。",yi:"坦诚沟通、承认错误、换位思考",ji:"冷战、翻旧账、扯别人下水"},
+  {rank:"中下",poem:"落花有意随流水，流水无心恋落花。莫叹相思空一场，缘尽之时各天涯。",read:"你的心意对方可能没有接收到，或者接收到了但选择忽略。有时候不是你不好，是你们不合适。",guide:"接受现实，及时止损。",yi:"放手、专注自己、接受不完美",ji:"死缠烂打、卑微讨好、失去自我"},
+  {rank:"中下",poem:"雾里看花终隔一层，水中捞月到头空。劝君莫在迷途走，回头才见真光明。",read:"你在一段不太健康的关系里越陷越深。不是你不够好，是这个环境不适合你生长。",guide:"该撤退就撤退，这不是认输。",yi:"冷静评估、找人倾诉、给自己设底线",ji:"继续投入沉没成本、委屈求全、自我欺骗"},
+  {rank:"下",poem:"乌云蔽日暂无光，独坐愁城泪两行。莫道人间无好景，风停雨住见太阳。",read:"现在确实很难，但不会永远这样。这个阶段会过去的，你需要的是撑过去。",guide:"照顾好自己，这是最重要的事。",yi:"自我关爱、找专业帮助、允许自己难过",ji:"做任何重大感情决定、自我伤害、孤立自己"},
+  {rank:"下",poem:"枯木逢春尚有时，人生何必太心急。今日虽是低谷路，来年花开满园时。",read:"现在不是谈恋爱的好时机。先把自己照顾好，把生活理顺，爱情自然会来。",guide:"先爱自己，再爱别人。",yi:"独处、学习、健身、搞钱",ji:"为了不孤独而将就、回头找前任、在感情里找价值感"},
+  {rank:"上上",poem:"天作之合非偶然，千里姻缘一线牵。今日得此上上签，良缘美眷在今年。",read:"极品好签。你的感情运势正处于巅峰，不管是单身还是有伴，都有大好事要发生。",guide:"大胆行动，宇宙都在帮你。",yi:"一切关于爱情的事",ji:"唯一忌讳是不行动"},
+  {rank:"上",poem:"雨后初晴彩虹现，柳暗花明在眼前。有情人终成眷属，只需耐心等几天。",read:"好事多磨，但磨完了就是好事。你的等待不是白等，结果会让你惊喜。",guide:"再等等，好消息在路上了。",yi:"保持信心、维持现状",ji:"放弃、换目标、急躁"},
+  {rank:"中上",poem:"月缺月圆自有时，花落花开春又来。眼前虽有小别离，相逢更在明月夜。",read:"暂时的分开不代表结束。如果是对的人，兜兜转转还会回来。",guide:"给空间，但不要断联。",yi:"保持联系、给对方空间、做自己的事",ji:"纠缠、监视、找Ta朋友打听"},
+  {rank:"中",poem:"棋逢对手将遇良才，你来我往见真章。莫将试探当游戏，真心才是通关牌。",read:"你们之间有一种微妙的博弈。都在试探，都在衡量，但谁都不愿意先亮底牌。",guide:"总要有人先真诚。",yi:"坦诚、放下防备、说真话",ji:"继续试探、玩欲擒故纵、嘴硬心软"},
+  {rank:"中下",poem:"前路茫茫雾重重，独行莫怨路不通。休将错爱当真爱，放下执念见清风。",read:"你执着的那个人可能不是你的答案。执念和爱情的区别是：爱情让你变好，执念让你变小。",guide:"问问自己：我是在爱Ta还是在执着？",yi:"自省、断舍离、写日记",ji:"继续追一个不可能的人"},
+  {rank:"下下",poem:"镜花水月梦一场，醒来方知泪两行。劝君及早抽身去，莫待伤深悔断肠。",read:"当头棒喝签。你现在的感情状态需要你清醒一下——你知道有问题，所有人都知道有问题，就差你承认了。",guide:"承认现实，这是解脱的第一步。",yi:"承认事实、做艰难但正确的决定",ji:"自欺欺人、继续忍耐、等Ta改变"},
+];
+
+/* ═══ BAZI (八字速配) ═══ */
+var TIAN=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+var DI=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+var WUXING_T=["木","木","火","火","土","土","金","金","水","水"];
+var WUXING_D=["水","土","木","木","土","火","火","土","金","金","土","水"];
+var SHENGXIAO=["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+var BAZI_MATCH=[
+  {type:"天作之合",desc:"你们的八字五行互补得恰到好处，日柱相合，简直是教科书级别的般配。这种缘分在命理学上被称为「天赐良缘」，不是你们自己找到了对方，是命运把你们推到了一起。在一起不需要太多磨合，自然而然就能找到舒服的节奏。你说东Ta不会偏要说西，你难过的时候Ta不需要你解释就知道该怎么安慰你。这不是巧合，是你们的能量场天生就在同一个频率上。珍惜这段缘分吧——这种般配程度，很多人一辈子都遇不到。",score:95},
+  {type:"良缘佳偶",desc:"八字整体和谐，五行之间有良好的互补关系。虽然有一两处小摩擦的地方，但都在可控范围内，不影响大局。你们的关系底色是温暖的，偶尔的争执反而是调味料——就像菜里的盐，没有会淡，有了才有味道。你们的日柱关系显示出一种「互相成就」的模式：Ta的优点恰好能补你的短板，你的长处也能撑起Ta的弱项。建议你们在遇到分歧时，多想想对方的出发点——你们的矛盾大多不是原则性的，而是方式方法上的差异。方向是一致的，只是走法不同而已。",score:85},
+  {type:"欢喜冤家",desc:"你们的八字有互相吸引的地方，也有互相较劲的地方。像磁铁的两极——靠近时吸力强大，但翻个面就互相排斥。在一起不会无聊，这是确定的。但也不会太安稳——总会有那么一些时刻让你们想掐死对方。从五行看，你们有「相生」也有「相克」的关系，这意味着你们既能激发彼此最好的一面，也能激怒彼此最暴躁的一面。这种关系像过山车，刺激但不是所有人都受得了。如果你们都享受这种张力，那其实蛮有趣的；如果其中一方更需要稳定感，那就需要认真谈谈你们的底线和边界了。",score:70},
+  {type:"磨合考验",desc:"五行上有一些冲突，属于需要「修炼」的缘分。不是天生就合拍，但也不是完全不搭——更像是两块形状不太一样的拼图，需要找到正确的角度才能拼在一起。你们的日柱关系显示出一种「推拉」的动态：一方向前一步，另一方就退后一步。这种模式如果不自觉地打破，会形成一个让双方都很累的循环。好消息是，命理上的冲突不是判死刑——它只是告诉你们需要比一般情侣多付出一些耐心和智慧。具体建议：遇到争执时，先各自冷静30分钟再沟通，不要在情绪最激烈的时候做决定。",score:55},
+  {type:"道阻且长",desc:"八字冲突比较明显，五行上存在较强的克制关系。说实话，在一起不是不可以，但你们需要做好心理准备：这段关系会比大多数人的更辛苦。不是因为你们不够好，是因为你们的能量模式天生就容易「短路」——一个人充电的方式恰好是另一个人放电的方式，互相消耗几乎是默认模式。如果你们决定在一起，需要有意识地创造「各自充电」的空间和时间。不要试图改变对方的本性，那是跟天命作对。学会接受差异、管理冲突，是你们最重要的功课。也可以考虑寻求专业的关系咨询。",score:40},
+  {type:"此生过客",desc:"八字显示你们更适合做朋友、知己，或者人生中一段重要但不是永久的缘分。有些人出现在你生命里不是为了留下，是为了教会你一些事情——可能是教你怎么爱、怎么放手、怎么认识自己。从五行上看，你们的能量场存在根本性的不兼容，长期相处会让双方都越来越偏离自己的最佳状态。这不是谁的错，就像水和油——都是好东西，但硬要混在一起只会互相别扭。如果你们现在还在一起，请认真想想：你是真的快乐，还是只是害怕孤独？答案你心里清楚。该放手的时候放手，不是认输，是给彼此自由。",score:25},
+];
+
+function calcBazi(y,m,d){
+  var t=(y-4)%10;if(t<0)t+=10;
+  var di=(y-4)%12;if(di<0)di+=12;
+  var mBase=((y%5)*2+m+1)%10;
+  var md=(y*12+m+13)%12;
+  var dd=(Math.floor((Date.UTC(y,m-1,d)/86400000)+10)%60);
+  var dt=dd%10;var ddi=dd%12;
+  return{yearT:t,yearD:di,monthT:mBase%10,monthD:md,dayT:dt,dayD:ddi,sx:SHENGXIAO[di]};
+}
+
+function baziCompat(b1,b2){
+  var score=50;
+  var w1=WUXING_T[b1.dayT],w2=WUXING_T[b2.dayT];
+  var sheng={"木":"火","火":"土","土":"金","金":"水","水":"木"};
+  var ke={"木":"土","土":"水","水":"火","火":"金","金":"木"};
+  if(sheng[w1]===w2||sheng[w2]===w1)score+=20;
+  if(ke[w1]===w2||ke[w2]===w1)score-=15;
+  if(w1===w2)score+=10;
+  var he6=[[0,1],[2,11],[3,10],[4,9],[5,8],[6,7]];
+  he6.forEach(function(p){if((b1.dayD===p[0]&&b2.dayD===p[1])||(b1.dayD===p[1]&&b2.dayD===p[0]))score+=15});
+  var chong=[[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]];
+  chong.forEach(function(p){if((b1.yearD===p[0]&&b2.yearD===p[1])||(b1.yearD===p[1]&&b2.yearD===p[0]))score-=10});
+  if(score>90)score=95;if(score<10)score=15;
+  score=Math.max(15,Math.min(95,score));
+  var idx=score>=90?0:score>=75?1:score>=60?2:score>=45?3:score>=30?4:5;
+  return{score:score,info:BAZI_MATCH[idx],w1:w1,w2:w2,sx1:b1.sx,sx2:b2.sx,gz1:TIAN[b1.dayT]+DI[b1.dayD],gz2:TIAN[b2.dayT]+DI[b2.dayD]};
+}
+
+/* ═══ DAILY FORTUNE (今日运势) ═══ */
+var FORTUNE_KW=["暗涌","破冰","回温","试探","拉扯","甜蜜","冷战","和解","心动","犹豫","错过","重逢","告白","放下","执念","自由","疗愈","觉醒"];
+var FORTUNE_YI=["主动表白","约Ta出去","发那条消息","认真聊一次","牵手","说软话","承认错误","送小礼物","回忆甜蜜时刻","夸Ta"];
+var FORTUNE_JI=["翻旧账","冷战","已读不回","说反话","跟前任联系","在朋友圈阴阳怪气","酒后发消息","查Ta手机","提分手试探","跟别人暧昧气Ta"];
+var LUCKY_COLORS=["珊瑚粉——让你看起来更温柔","雾霾蓝——冷静但不冷漠","奶油白——给人安全感","薄荷绿——清新感满分","焦糖色——温暖且治愈","薰衣草紫——神秘又吸引人","蜜桃橙——活力四射甜甜的","烟灰色——高级又有距离感"];
+var FORTUNE_MSG=["今天适合勇敢一点，最坏的结果不过是回到原点","有些话今天不说，明天就更说不出口了","今天的你散发着让人想靠近的气场","注意控制情绪，冲动是魔鬼","今天适合倾听，少说多听反而能收获更多","桃花运不错，出门记得打扮","今天的你需要独处充电，别勉强自己社交","有人在想你，但你可能猜不到是谁","旧的不去新的不来，放下才能拥有","直觉很准，如果感觉不对就是不对"];
+
+function calcFortune(month,day){
+  var today=new Date();var ty=today.getFullYear(),tm=today.getMonth()+1,td=today.getDate();
+  var seed=(ty*10000+tm*100+td)*31+(month*100+day)*17;
+  var s=function(n){return((seed*n+7919)%10007)};
+  var stars=s(1)%5+1;
+  var kw1=FORTUNE_KW[s(2)%FORTUNE_KW.length],kw2=FORTUNE_KW[s(3)%FORTUNE_KW.length];
+  var yi=FORTUNE_YI[s(4)%FORTUNE_YI.length];
+  var ji=FORTUNE_JI[s(5)%FORTUNE_JI.length];
+  var color=LUCKY_COLORS[s(6)%LUCKY_COLORS.length];
+  var msg=FORTUNE_MSG[s(7)%FORTUNE_MSG.length];
+  return{stars:stars,kw:[kw1,kw2],yi:yi,ji:ji,color:color,msg:msg};
+}
+
 /* ═══ MAIN APP ═══ */
 function App() {
   var [pg,setPg]=useState("home");
@@ -282,10 +372,13 @@ function App() {
   var [pType,setPType]=useState("");
   var [tarotCards,setTarotCards]=useState(null),[tarotRevealed,setTarotRevealed]=useState([false,false,false]),[synthesis,setSynthesis]=useState("");
   var [tarotPool,setTarotPool]=useState(null),[tarotStep,setTarotStep]=useState("intro"),[tarotPicked,setTarotPicked]=useState([]);
+  var [qianResult,setQianResult]=useState(null),[qianShaking,setQianShaking]=useState(false);
+  var [bDate1,setBDate1]=useState({y:"",m:"",d:""}),[bDate2,setBDate2]=useState({y:"",m:"",d:""}),[baziResult,setBaziResult]=useState(null);
+  var [fMonth,setFMonth]=useState(""),[fDay,setFDay]=useState(""),[fortuneResult,setFortuneResult]=useState(null);
 
-  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([])}
+  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
   function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
-  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([])}
+  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
   function ansQ(i){setPk(i);setTimeout(function(){var n=[...qa,i];setQa(n);setPk(-1);if(qi<QUIZ.length-1)setQi(qi+1);else setQr(calcQuiz(n))},250)}
   function handleImg(e){
     var files=Array.from(e.target.files);if(!files.length)return;
@@ -307,6 +400,22 @@ function App() {
       };
       img.src=URL.createObjectURL(f);
     });
+  }
+
+  function shakeQian(){
+    setQianShaking(true);setQianResult(null);
+    setTimeout(function(){
+      setQianResult(QIAN[Math.floor(Math.random()*QIAN.length)]);
+      setQianShaking(false);
+    },1500);
+  }
+  function doBazi(){
+    var b1=calcBazi(parseInt(bDate1.y),parseInt(bDate1.m),parseInt(bDate1.d));
+    var b2=calcBazi(parseInt(bDate2.y),parseInt(bDate2.m),parseInt(bDate2.d));
+    setBaziResult(baziCompat(b1,b2));
+  }
+  function doFortune(){
+    setFortuneResult(calcFortune(parseInt(fMonth),parseInt(fDay)));
   }
 
   function startTarot(){
@@ -416,6 +525,17 @@ function App() {
         </div>
         <div style={{width:32,height:32,borderRadius:10,background:"rgba(184,151,106,.15)",display:"flex",alignItems:"center",justifyContent:"center",color:C.gold,fontSize:16,position:"relative"}}>›</div>
       </button>
+
+      {/* Mystical section */}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,marginTop:4}}><div style={{flex:1,height:1,background:C.line}}/><span className="sans" style={{fontSize:10,color:C.gold,letterSpacing:4,textTransform:"uppercase",fontWeight:600}}>Mystical</span><div style={{flex:1,height:1,background:C.line}}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:28}}>
+        {[{id:"qian",icon:"\uD83C\uDFEE",l:"月老灵签",s:"求一支签",bar:"#C4727F"},{id:"bazi",icon:"\uD83D\uDCAB",l:"八字速配",s:"缘分几何",bar:"#B8976A"},{id:"fortune",icon:"\uD83C\uDF19",l:"今日运势",s:"感情天气",bar:"#5E6E99"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} style={{background:C.card,borderRadius:18,padding:"26px 10px 20px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"all .25s",boxShadow:"0 2px 16px rgba(26,31,54,.04)",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(26,31,54,.08)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 16px rgba(26,31,54,.04)"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:t.bar}}/>
+          <div style={{fontSize:32,marginBottom:10}}>{t.icon}</div>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink}}>{t.l}</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:5,letterSpacing:1}}>{t.s}</div>
+        </button>})}
+      </div>
 
       {/* Type grid */}
       <div>
@@ -597,7 +717,7 @@ function App() {
     </div>}
 
     {/* ═══ INPUT ═══ */}
-    {pg!=="home"&&pg!=="quiz"&&pg!=="tarot"&&step==="input"&&<div style={{animation:"fu .4s ease"}}>
+    {pg!=="home"&&pg!=="quiz"&&pg!=="tarot"&&pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="input"&&<div style={{animation:"fu .4s ease"}}>
       {err&&<div className="sans" style={{padding:"14px 18px",background:"#FFF5F5",borderRadius:14,marginBottom:14,fontSize:13,color:C.rose,border:"1px solid #FFE3E3"}}>{err}</div>}
       <div style={{background:C.card,borderRadius:24,padding:26,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
         {pg==="check"&&<div style={{marginBottom:18}}>
@@ -641,7 +761,7 @@ function App() {
     </div>}
 
     {/* Loading */}
-    {step==="loading"&&<div style={{textAlign:"center",padding:"80px 20px",animation:"fu .4s ease"}}>
+    {pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="loading"&&<div style={{textAlign:"center",padding:"80px 20px",animation:"fu .4s ease"}}>
       <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:999,background:C.card,boxShadow:"0 4px 24px rgba(45,42,50,.06)",border:"1px solid "+C.line}}><Dots/><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:500}}>{lm}</span></div>
     </div>}
 
@@ -718,6 +838,115 @@ function App() {
       </div>
       <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 你现在应该做的一件事</div><div className="sans" style={{fontSize:15,fontWeight:600,color:C.ink,lineHeight:1.9}}>{res.todo}</div></div>
       <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ QIAN (月老灵签) ═══ */}
+    {pg==="qian"&&<div style={{animation:"fu .5s ease"}}>
+      {!qianResult&&!qianShaking&&<div style={{textAlign:"center"}}>
+        <div style={{background:"linear-gradient(135deg,#1A1F36,#3D2828)",borderRadius:24,padding:"48px 28px",color:"#fff",position:"relative",overflow:"hidden",marginBottom:20}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 30% 40%,rgba(196,114,127,.1),transparent 50%),radial-gradient(circle at 70% 60%,rgba(184,151,106,.1),transparent 50%)"}}/>
+          <div style={{fontSize:72,marginBottom:16,position:"relative",animation:"float 4s ease infinite"}}>{"\uD83C\uDFEE"}</div>
+          <div className="serif" style={{fontSize:28,fontWeight:700,marginBottom:8,position:"relative"}}>{String.fromCharCode(26376,32769,28789,31614)}</div>
+          <div className="sans" style={{fontSize:14,opacity:.6,position:"relative",lineHeight:1.7}}>{String.fromCharCode(24515,20013,24819,24819,65292,24515,26376,32769,25351,36335)}</div>
+        </div>
+        <button onClick={shakeQian} className="sans" style={{width:"100%",padding:18,borderRadius:18,border:"none",fontSize:17,fontWeight:700,color:"#fff",cursor:"pointer",background:"linear-gradient(135deg,"+C.gold+","+C.rose+")",boxShadow:"0 8px 30px rgba(184,151,106,.2)",animation:"glow 3s ease infinite"}}>{String.fromCharCode(25671,31614)} {"\u2728"}</button>
+      </div>}
+      {qianShaking&&<div style={{textAlign:"center",padding:"80px 20px"}}>
+        <div style={{fontSize:80,animation:"float .3s ease infinite"}}>{"\uD83C\uDFEE"}</div>
+        <div className="sans" style={{fontSize:15,color:C.sub,marginTop:20}}>{String.fromCharCode(26376,32769,27491,22312,20026,20320,25277,31614,8230,8230)}</div>
+      </div>}
+      {qianResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,#1A1F36,#3D2828)",borderRadius:24,padding:"36px 28px",color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 50%,rgba(184,151,106,.1),transparent 60%)"}}/>
+          <div style={{fontSize:12,color:C.gold,letterSpacing:4,marginBottom:8,position:"relative"}} className="sans">{qianResult.rank}</div>
+          <div className="serif" style={{fontSize:18,lineHeight:2.2,position:"relative",color:"rgba(255,255,255,.9)"}}>{qianResult.poem}</div>
+        </div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.gold,marginBottom:8}}>{"\uD83D\uDD2E "}{String.fromCharCode(30333,35805)}</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{qianResult.read}</div></div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.sage,marginBottom:8}}>{"\uD83D\uDCA1 "}{String.fromCharCode(25351,24341)}</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{qianResult.guide}</div></div>
+        <div style={{display:"flex",gap:12,marginTop:16}}>
+          <div style={{flex:1,padding:"18px",background:"#F0FFF4",borderRadius:16,border:"1px solid #C3FAE8"}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.sage,marginBottom:6}}>{String.fromCharCode(23452)}</div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{qianResult.yi}</div></div>
+          <div style={{flex:1,padding:"18px",background:"#FFF5F5",borderRadius:16,border:"1px solid #FFE3E3"}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:6}}>{String.fromCharCode(24524)}</div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{qianResult.ji}</div></div>
+        </div>
+        <button onClick={shakeQian} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,25671,19968,27425)} {"\u21BB"}</button>
+      </div>}
+    </div>}
+
+    {/* ═══ BAZI (八字速配) ═══ */}
+    {pg==="bazi"&&<div style={{animation:"fu .5s ease"}}>
+      {!baziResult&&<div>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:48,marginBottom:12}}>{"\uD83D\uDCAB"}</div>
+          <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20843,23383,36895,37197)}</div>
+          <div className="sans" style={{fontSize:13,color:C.sub}}>{String.fromCharCode(36755,20837,21452,26041,29983,26085,65292,30475,30475,32536,20998,20960,20309)}</div>
+        </div>
+        {[{label:String.fromCharCode(20320,30340,29983,26085),date:bDate1,setDate:setBDate1},{label:"Ta"+String.fromCharCode(30340,29983,26085),date:bDate2,setDate:setBDate2}].map(function(item,idx){return <div key={idx} style={{padding:"20px",background:C.card,borderRadius:20,boxShadow:"0 2px 20px rgba(26,31,54,.04)",border:"1px solid "+C.line,marginBottom:12}}>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:12}}>{item.label}</div>
+          <div style={{display:"flex",gap:8}}>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(24180)} value={item.date.y} onChange={function(e){var v=Object.assign({},item.date,{y:e.target.value});item.setDate(v)}} className="sans" style={{flex:2,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={item.date.m} onChange={function(e){var v=Object.assign({},item.date,{m:e.target.value});item.setDate(v)}} className="sans" style={{flex:1,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={item.date.d} onChange={function(e){var v=Object.assign({},item.date,{d:e.target.value});item.setDate(v)}} className="sans" style={{flex:1,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          </div>
+        </div>})}
+        <button onClick={doBazi} disabled={!bDate1.y||!bDate1.m||!bDate1.d||!bDate2.y||!bDate2.m||!bDate2.d} className="sans" style={{width:"100%",marginTop:8,padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:"#fff",background:(bDate1.y&&bDate1.m&&bDate1.d&&bDate2.y&&bDate2.m&&bDate2.d)?C.wine:"#ddd",boxShadow:(bDate1.y&&bDate2.y)?"0 8px 28px rgba(44,62,107,.15)":"none",border:"none",cursor:"pointer"}}>{String.fromCharCode(24320,22987,21512,30424)} {"\uD83D\uDCAB"}</button>
+      </div>}
+      {baziResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,#1A1F36,#2C3E6B)",borderRadius:24,padding:"36px 24px",color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 30%,rgba(184,151,106,.12),transparent 60%)"}}/>
+          <div className="sans" style={{fontSize:12,color:C.gold,letterSpacing:3,marginBottom:12,position:"relative"}}>{String.fromCharCode(32536,20998,25351,25968)}</div>
+          <div className="serif" style={{fontSize:56,fontWeight:900,color:"#fff",position:"relative"}}>{baziResult.score}<span style={{fontSize:20}}>%</span></div>
+          <div className="serif" style={{fontSize:22,fontWeight:700,color:C.gold,marginTop:8,position:"relative"}}>{baziResult.info.type}</div>
+        </div>
+        <div style={{display:"flex",gap:12,marginBottom:16}}>
+          <div style={{flex:1,...sec,textAlign:"center",marginTop:0}}>
+            <div className="sans" style={{fontSize:11,color:C.muted,marginBottom:6}}>{String.fromCharCode(20320)}</div>
+            <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink}}>{baziResult.gz1}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub,marginTop:4}}>{baziResult.w1}{String.fromCharCode(21629)} · {baziResult.sx1}{String.fromCharCode(24180)}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center"}}><span style={{fontSize:24,color:C.gold}}>{"\u2764\uFE0F"}</span></div>
+          <div style={{flex:1,...sec,textAlign:"center",marginTop:0}}>
+            <div className="sans" style={{fontSize:11,color:C.muted,marginBottom:6}}>Ta</div>
+            <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink}}>{baziResult.gz2}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub,marginTop:4}}>{baziResult.w2}{String.fromCharCode(21629)} · {baziResult.sx2}{String.fromCharCode(24180)}</div>
+          </div>
+        </div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{baziResult.info.desc}</div></div>
+        <button onClick={function(){setBaziResult(null)}} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(37325,26032,21512,30424)} {"\u21BB"}</button>
+      </div>}
+    </div>}
+
+    {/* ═══ FORTUNE (今日运势) ═══ */}
+    {pg==="fortune"&&<div style={{animation:"fu .5s ease"}}>
+      {!fortuneResult&&<div style={{textAlign:"center"}}>
+        <div style={{fontSize:56,marginBottom:16}}>{"\uD83C\uDF19"}</div>
+        <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
+        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:24}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
+        <div style={{display:"flex",gap:12,maxWidth:240,margin:"0 auto",marginBottom:20}}>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,padding:"14px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={fDay} onChange={function(e){setFDay(e.target.value)}} className="sans" style={{flex:1,padding:"14px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+        </div>
+        <button onClick={doFortune} disabled={!fMonth||!fDay} className="sans" style={{width:"100%",maxWidth:300,margin:"0 auto",padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:"#fff",background:(fMonth&&fDay)?C.wine:"#ddd",border:"none",cursor:"pointer",boxShadow:(fMonth&&fDay)?"0 8px 28px rgba(44,62,107,.15)":"none",display:"block"}}>{String.fromCharCode(26597,30475,36816,21183)} {"\uD83C\uDF19"}</button>
+      </div>}
+      {fortuneResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,#1A1F36,#2C3E6B)",borderRadius:24,padding:"36px 24px",color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 30%,rgba(184,151,106,.1),transparent 60%)"}}/>
+          <div className="sans" style={{fontSize:12,color:C.gold,letterSpacing:3,marginBottom:12,position:"relative"}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
+          <div style={{fontSize:32,position:"relative",letterSpacing:6}}>{Array(fortuneResult.stars).fill(null).map(function(_,i){return <span key={i}>{"\u2B50"}</span>})}{Array(5-fortuneResult.stars).fill(null).map(function(_,i){return <span key={i} style={{opacity:.2}}>{"\u2B50"}</span>})}</div>
+          <div className="sans" style={{display:"flex",gap:8,justifyContent:"center",marginTop:14,position:"relative"}}>{fortuneResult.kw.map(function(k,i){return <span key={i} style={{padding:"4px 14px",borderRadius:999,background:"rgba(255,255,255,.1)",fontSize:13,color:"rgba(255,255,255,.7)"}}>#{k}</span>})}</div>
+        </div>
+        <div style={{display:"flex",gap:12,marginBottom:0}}>
+          <div style={{flex:1,...sec,marginTop:0}}>
+            <div className="sans" style={{fontSize:11,fontWeight:700,color:C.sage,marginBottom:6}}>{String.fromCharCode(23452)}</div>
+            <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.yi}</div>
+          </div>
+          <div style={{flex:1,...sec,marginTop:0}}>
+            <div className="sans" style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:6}}>{String.fromCharCode(24524)}</div>
+            <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.ji}</div>
+          </div>
+        </div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.gold,marginBottom:6}}>{String.fromCharCode(24184,36816,33394)}</div><div className="sans" style={{fontSize:14,color:C.ink+"DD",lineHeight:1.7}}>{fortuneResult.color}</div></div>
+        <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)"}}><div className="sans" style={{fontSize:15,color:C.ink,lineHeight:2,fontWeight:500}}>{"\uD83D\uDCAC "}{fortuneResult.msg}</div></div>
+        <button onClick={function(){setFortuneResult(null)}} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,26597,19968,27425)} {"\u21BB"}</button>
+      </div>}
     </div>}
 
     </div>
