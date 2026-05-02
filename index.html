@@ -374,7 +374,7 @@ function App() {
   var [tarotPool,setTarotPool]=useState(null),[tarotStep,setTarotStep]=useState("intro"),[tarotPicked,setTarotPicked]=useState([]);
   var [qianResult,setQianResult]=useState(null),[qianShaking,setQianShaking]=useState(false);
   var [bDate1,setBDate1]=useState({y:"",m:"",d:""}),[bDate2,setBDate2]=useState({y:"",m:"",d:""}),[baziResult,setBaziResult]=useState(null);
-  var [fMonth,setFMonth]=useState(""),[fDay,setFDay]=useState(""),[fortuneResult,setFortuneResult]=useState(null);
+  var [fMonth,setFMonth]=useState(""),[fDay,setFDay]=useState(""),[fYear,setFYear]=useState(""),[fortuneResult,setFortuneResult]=useState(null);
 
   function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
   function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
@@ -917,10 +917,11 @@ function App() {
     {/* ═══ FORTUNE (今日运势) ═══ */}
     {pg==="fortune"&&<div style={{animation:"fu .5s ease"}}>
       {!fortuneResult&&<div style={{textAlign:"center"}}>
-        <div style={{fontSize:56,marginBottom:16}}>{"\uD83C\uDF19"}</div>
+        <div style={{fontSize:56,marginBottom:16,lineHeight:1.2}}>{"\uD83C\uDF19"}</div>
         <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
         <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:24}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
-        <div style={{display:"flex",gap:12,maxWidth:240,margin:"0 auto",marginBottom:20}}>
+        <div style={{display:"flex",gap:10,maxWidth:300,margin:"0 auto",marginBottom:20}}>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(24180)} value={fYear||""} onChange={function(e){setFYear(e.target.value)}} className="sans" style={{flex:2,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
           <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
           <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={fDay} onChange={function(e){setFDay(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
         </div>
