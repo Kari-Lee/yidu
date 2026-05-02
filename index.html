@@ -348,13 +348,12 @@ function App() {
   var curC=(TABS.find(function(t){return t.id===pg})||{}).c||C.wine;
   var hasInput=text.trim()||imgs.length;
 
-  function BackBtn(){return <div style={{marginBottom:12}}><span onClick={goHome} style={{fontSize:13,color:"#4A6FA5",fontWeight:600,cursor:"pointer",display:"inline-block",padding:"4px 0"}}>{"< "}{String.fromCharCode(36820,22238,39318,39029)}</span></div>}
 
   return <div className="sans" style={{minHeight:"100vh",background:C.bg,paddingBottom:80}}>
     <style>{CSS}</style>
 
     {/* ═══ HEADER ═══ */}
-    <div style={{padding:"52px 24px 20px",textAlign:"center",position:"relative"}}>
+    <div style={{padding:"52px 24px 10px",textAlign:"center",position:"relative"}}>
       <div style={{position:"absolute",top:0,left:0,right:0,height:220,background:"linear-gradient(180deg,#EDF2F8,#FFFFFF)",zIndex:0}}/>
       <div onClick={goHome} style={{cursor:"pointer",position:"relative",zIndex:1}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 14px",borderRadius:999,background:"rgba(74,111,165,.06)",marginBottom:12}}>
@@ -364,6 +363,9 @@ function App() {
         <h1 className="serif" style={{fontSize:52,fontWeight:900,color:C.ink,letterSpacing:6,lineHeight:1}}>已读</h1>
         <p className="sans" style={{fontSize:13,color:C.sub,marginTop:10,fontWeight:500,letterSpacing:1}}>Ta不是不爱你 — 是你们都有病</p>
       </div>
+      {pg!=="home"&&<div style={{position:"relative",zIndex:1,textAlign:"left",marginTop:16}}>
+        <span onClick={goHome} className="sans" style={{fontSize:14,color:"#4A6FA5",fontWeight:700,cursor:"pointer",padding:"6px 0",display:"inline-block"}}>{"< "}{String.fromCharCode(36820)}{String.fromCharCode(22238)}{String.fromCharCode(39318)}{String.fromCharCode(39029)}</span>
+      </div>}
     </div>
 
     <div style={{padding:"0 16px",maxWidth:500,margin:"0 auto"}}>
@@ -426,7 +428,6 @@ function App() {
 
     {/* ═══ QUIZ ═══ */}
     {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
-      <BackBtn/>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"4px 10px",borderRadius:8,background:C.bg,color:C.sub,fontSize:12,fontWeight:600}}>{"< "}{String.fromCharCode(19978,19968,39064)}</button>}
@@ -446,7 +447,6 @@ function App() {
     </div>}
 
     {pg==="quiz"&&qr&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       <TCard type={qr.type}/>
       <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:18,flexWrap:"wrap"}}>{TI[qr.type].traits.map(function(tr,i){return <span key={i} className="sans" style={{padding:"6px 14px",borderRadius:999,fontSize:12,fontWeight:600,background:TI[qr.type].bg,color:C.ink+"CC",border:"1px solid "+C.line}}>#{tr}</span>})}</div>
       <div style={sec}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>🔍 你的画像</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].detail}</div></div>
@@ -462,7 +462,6 @@ function App() {
 
     {/* ═══ TAROT ═══ */}
     {pg==="tarot"&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       {/* Intro */}
       {tarotStep==="intro"&&<div style={{textAlign:"center"}}>
         <div style={{background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",borderRadius:28,padding:"48px 28px",color:"#fff",position:"relative",overflow:"hidden",marginBottom:20}}>
@@ -593,7 +592,6 @@ function App() {
 
     {/* ═══ INPUT ═══ */}
     {pg!=="home"&&pg!=="quiz"&&pg!=="tarot"&&step==="input"&&<div style={{animation:"fu .4s ease"}}>
-      <BackBtn/>
       {err&&<div className="sans" style={{padding:"14px 18px",background:"#FFF5F5",borderRadius:14,marginBottom:14,fontSize:13,color:C.rose,border:"1px solid #FFE3E3"}}>{err}</div>}
       <div style={{background:C.card,borderRadius:24,padding:26,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
         {pg==="check"&&<div style={{marginBottom:18}}>
@@ -643,7 +641,6 @@ function App() {
 
     {/* ═══ DIAGNOSE RESULT ═══ */}
     {pg==="diagnose"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       <div style={{display:"flex",gap:12,marginBottom:14}}><TCard type={res.user_type} label={"你："+res.user_label} small/><TCard type={res.partner_type} label={"Ta："+res.partner_label} small/></div>
       <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🔗 互动模式</div><div className="sans" style={{fontSize:15,lineHeight:1.9,color:C.ink+"DD"}}>{res.match}</div></div>
       <div style={sec}><div style={{display:"flex",justifyContent:"space-between"}}><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:700}}>置信度</span><span className="sans" style={{fontSize:24,fontWeight:900,color:C.wine}}>{res.confidence}%</span></div><div style={{height:5,background:C.line,borderRadius:99,overflow:"hidden",marginTop:10}}><div style={{height:"100%",width:res.confidence+"%",background:"linear-gradient(90deg,"+C.wine+","+C.plum+")",borderRadius:99}}/></div></div>
@@ -657,7 +654,6 @@ function App() {
 
     {/* ═══ TRANSLATE RESULT ═══ */}
     {pg==="translate"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       {(res.translations||[]).map(function(tr,ti){var colors=[C.rose,"#E6A817",C.plum];return <div key={ti} style={{...sec,marginBottom:14}}>
         <div style={{padding:"14px 18px",background:C.warm,borderRadius:14,marginBottom:16,borderLeft:"3px solid "+C.plum}}>
           <div className="sans" style={{fontSize:11,color:C.sub,fontWeight:700,marginBottom:2}}>Ta说</div>
@@ -675,7 +671,6 @@ function App() {
 
     {/* ═══ CHECK RESULT ═══ */}
     {pg==="check"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       <div style={{...sec,padding:24}}>
         <div style={{textAlign:"center",padding:"32px 20px 28px",marginBottom:20,borderRadius:22,background:res.danger?"linear-gradient(135deg,#FFF5F3,#FFE3E3)":"linear-gradient(135deg,#F0FFF4,#D3F9D8)"}}>
           <div style={{fontSize:52,marginBottom:10}}>{res.danger?"🚨":"✅"}</div>
@@ -700,7 +695,6 @@ function App() {
 
     {/* ═══ PREDICT RESULT ═══ */}
     {pg==="predict"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
-      <BackBtn/>
       <div style={{...sec,background:"linear-gradient(135deg,#EDF2FF,#F0E6F6)",border:"none",marginBottom:14}}>
         <div className="sans" style={{fontSize:12,color:C.gold,fontWeight:700,marginBottom:6,letterSpacing:1}}>当前阶段</div>
         <div className="serif" style={{fontSize:22,fontWeight:900,color:C.ink,marginBottom:8}}>{res.stage}</div>
