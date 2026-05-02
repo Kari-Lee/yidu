@@ -10,16 +10,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#fff;color:#1E2A3A;min-height:100vh}
-.sf{font-family:'Playfair Display',Georgia,serif}
+body{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif;background:#fff;color:#1A1F36;min-height:100vh}
+.sf,.serif{font-family:'Playfair Display',Georgia,serif}
 button{font-family:inherit;cursor:pointer;border:none}
 textarea{font-family:inherit;display:block}
 textarea:focus{outline:none}
-textarea::placeholder{color:#A8B8C8}
+textarea::placeholder{color:#9CA8B8}
 @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(74,111,165,.15)}50%{box-shadow:0 0 40px rgba(74,111,165,.25)}}
+@keyframes glow{0%,100%{box-shadow:0 0 30px rgba(184,151,106,.12)}50%{box-shadow:0 0 50px rgba(184,151,106,.25)}}
 @keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
@@ -29,7 +29,7 @@ textarea::placeholder{color:#A8B8C8}
 const { useState, useEffect } = React;
 
 /* ═══ DESIGN SYSTEM ═══ */
-const C = { bg: "#FFFFFF", card: "#FFFFFF", wine: "#4A6FA5", gold: "#7BA7CC", plum: "#6881A3", sage: "#5B9EA6", rose: "#8FAABE", ink: "#1E2A3A", sub: "#6B7B8D", muted: "#A8B8C8", line: "#E8EEF4", warm: "#F0F5FA" };
+const C = { bg: "#FFFFFF", card: "#FFFFFF", wine: "#2C3E6B", gold: "#B8976A", plum: "#5E6E99", sage: "#4A8B7F", rose: "#C4727F", ink: "#1A1F36", sub: "#6E7A8A", muted: "#9CA8B8", line: "#EDF0F5", warm: "#F5F7FA" };
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -41,7 +41,7 @@ body{background:#fff}
 @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(139,58,98,.1)}50%{box-shadow:0 0 40px rgba(139,58,98,.2)}}
+@keyframes glow{0%,100%{box-shadow:0 0 30px rgba(184,151,106,.12)}50%{box-shadow:0 0 50px rgba(184,151,106,.25)}}
 textarea:focus{outline:none}textarea::placeholder{color:${C.muted}}
 .fu{animation:fu .5s ease both}
 .serif{font-family:'Playfair Display',Georgia,serif}
@@ -271,7 +271,7 @@ function EntryCard({icon,bg,title,sub,onClick}) {
   </button>;
 }
 
-var sec = {marginTop:14,padding:"24px",background:C.card,borderRadius:22,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line};
+var sec = {marginTop:16,padding:"24px",background:C.card,borderRadius:20,boxShadow:"0 2px 20px rgba(26,31,54,.04)",border:"1px solid "+C.line};
 
 /* ═══ MAIN APP ═══ */
 function App() {
@@ -354,17 +354,17 @@ function App() {
 
     {/* ═══ HEADER ═══ */}
     <div style={{padding:"52px 24px 10px",textAlign:"center",position:"relative"}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:220,background:"linear-gradient(180deg,#EDF2F8,#FFFFFF)",zIndex:0}}/>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:260,background:"linear-gradient(180deg,#F5F7FA,#FFFFFF)",zIndex:0}}/>
       <div onClick={goHome} style={{cursor:"pointer",position:"relative",zIndex:1}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 14px",borderRadius:999,background:"rgba(74,111,165,.06)",marginBottom:12}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:"#7BA7CC"}}/>
-          <span style={{fontSize:10,letterSpacing:4,color:"#7BA7CC",fontWeight:700,textTransform:"uppercase"}} className="sans">attachment analyzer</span>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 16px",borderRadius:999,background:"rgba(44,62,107,.04)",marginBottom:14}}>
+          <span style={{width:5,height:5,borderRadius:"50%",background:C.gold}}/>
+          <span style={{fontSize:10,letterSpacing:5,color:C.muted,fontWeight:600,textTransform:"uppercase"}} className="sans">attachment analyzer</span>
         </div>
-        <h1 className="serif" style={{fontSize:52,fontWeight:900,color:C.ink,letterSpacing:6,lineHeight:1}}>已读</h1>
-        <p className="sans" style={{fontSize:13,color:C.sub,marginTop:10,fontWeight:500,letterSpacing:1}}>Ta不是不爱你 — 是你们都有病</p>
+        <h1 className="serif" style={{fontSize:56,fontWeight:900,color:C.ink,letterSpacing:8,lineHeight:1}}>已读</h1>
+        <p className="sans" style={{fontSize:13,color:C.sub,marginTop:12,fontWeight:500,letterSpacing:2}}>Ta不是不爱你 — 是你们都有病</p>
       </div>
-      {pg!=="home"&&<div style={{position:"relative",zIndex:1,textAlign:"left",marginTop:16}}>
-        <span onClick={goHome} className="sans" style={{fontSize:14,color:"#4A6FA5",fontWeight:700,cursor:"pointer",padding:"6px 0",display:"inline-block"}}>{"< "}{String.fromCharCode(36820)}{String.fromCharCode(22238)}{String.fromCharCode(39318)}{String.fromCharCode(39029)}</span>
+      {pg!=="home"&&<div style={{position:"relative",zIndex:1,textAlign:"left",marginTop:18}}>
+        <span onClick={goHome} className="sans" style={{fontSize:14,color:C.gold,fontWeight:700,cursor:"pointer",padding:"6px 0",display:"inline-block"}}>{"< "}{String.fromCharCode(36820)}{String.fromCharCode(22238)}{String.fromCharCode(39318)}{String.fromCharCode(39029)}</span>
       </div>}
     </div>
 
@@ -373,54 +373,60 @@ function App() {
     {/* ═══ HOME ═══ */}
     {pg==="home"&&<div style={{animation:"fu .5s ease"}}>
       {/* Daily quote */}
-      <div style={{padding:"22px 24px",background:"linear-gradient(135deg,#EDF2F8,#E4ECF5)",borderRadius:20,marginBottom:24,border:"1px solid #D8E3EF",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(74,111,165,.06)"}}/>
-        <div className="serif" style={{fontSize:16,fontWeight:400,color:C.ink,lineHeight:1.8,fontStyle:"italic",position:"relative"}}>"{DAILY}"</div>
-        <div className="sans" style={{fontSize:11,color:"#7BA7CC",marginTop:10,fontWeight:700,letterSpacing:2}}>每日毒鸡汤</div>
+      <div style={{padding:"24px 26px",background:C.card,borderRadius:22,marginBottom:24,position:"relative",overflow:"hidden",border:"1px solid "+C.line,boxShadow:"0 2px 16px rgba(26,31,54,.04)"}}>
+        <div style={{position:"absolute",top:-30,right:-20,width:100,height:100,borderRadius:"50%",background:"radial-gradient(circle,rgba(184,151,106,.06),transparent)"}}/>
+        <div className="serif" style={{fontSize:16,fontWeight:400,color:C.ink,lineHeight:1.9,fontStyle:"italic",position:"relative"}}>{"\u201C"}{DAILY}{"\u201D"}</div>
+        <div className="sans" style={{fontSize:10,color:C.gold,marginTop:12,fontWeight:700,letterSpacing:3,textTransform:"uppercase",position:"relative"}}>Daily Toxic Quote</div>
       </div>
 
       {/* Hero: two main features */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
-        <button onClick={function(){go("quiz")}} style={{background:"linear-gradient(160deg,#E8F0FA,#D4E4F4)",borderRadius:24,padding:"32px 18px",border:"1px solid #C8D8E8",cursor:"pointer",textAlign:"center",boxShadow:"0 4px 20px rgba(74,111,165,.06)",transition:"all .2s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 30px rgba(74,111,165,.12)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(74,111,165,.06)"}}>
-          <div style={{fontSize:48,marginBottom:14}}>🧪</div>
-          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:6}}>测试依恋类型</div>
-          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>24道专业题<br/>3分钟出结果</div>
+        <button onClick={function(){go("quiz")}} style={{background:C.card,borderRadius:22,padding:"36px 18px 28px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",boxShadow:"0 4px 24px rgba(26,31,54,.05)",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(26,31,54,.1)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 24px rgba(26,31,54,.05)"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#B8976A,#D4B896)"}}/>
+          <div style={{fontSize:44,marginBottom:16}}>🧪</div>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:8}}>依恋类型测试</div>
+          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>24道专业题 · 3min</div>
         </button>
-        <button onClick={function(){go("diagnose")}} style={{background:"linear-gradient(160deg,#F0F5FA,#DCE8F3)",borderRadius:24,padding:"32px 18px",border:"1px solid #C8D8E8",cursor:"pointer",textAlign:"center",boxShadow:"0 4px 20px rgba(74,111,165,.06)",transition:"all .2s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 30px rgba(74,111,165,.12)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(74,111,165,.06)"}}>
-          <div style={{fontSize:48,marginBottom:14}}>🩺</div>
-          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:6}}>聊天记录确诊</div>
-          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>粘贴或截图<br/>AI双方分析</div>
+        <button onClick={function(){go("diagnose")}} style={{background:C.card,borderRadius:22,padding:"36px 18px 28px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",boxShadow:"0 4px 24px rgba(26,31,54,.05)",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(26,31,54,.1)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 24px rgba(26,31,54,.05)"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#2C3E6B,#5E6E99)"}}/>
+          <div style={{fontSize:44,marginBottom:16}}>🩺</div>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:8}}>聊天记录确诊</div>
+          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>AI分析双方类型</div>
         </button>
       </div>
 
       {/* Second row: 3 tools */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
-        {[{id:"translate",icon:"🔮",l:"翻译",s:"潜台词解码"},{id:"check",icon:"💊",l:"发不发",s:"拦住冲动"},{id:"predict",icon:"🔭",l:"预测",s:"感情走向"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} style={{background:"#fff",borderRadius:20,padding:"24px 12px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"all .2s",boxShadow:"0 2px 12px rgba(0,0,0,.03)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(0,0,0,.06)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.03)"}}>
-          <div style={{fontSize:36,marginBottom:10}}>{t.icon}</div>
-          <div className="serif" style={{fontSize:15,fontWeight:700,color:C.ink}}>{t.l}</div>
-          <div className="sans" style={{fontSize:11,color:C.muted,marginTop:5}}>{t.s}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:18}}>
+        {[{id:"translate",icon:"🔮",l:"翻译",s:"潜台词解码",bar:"#5E6E99"},{id:"check",icon:"💊",l:"发不发",s:"拦住冲动",bar:"#4A8B7F"},{id:"predict",icon:"🔭",l:"预测",s:"感情走向",bar:"#C4727F"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} style={{background:C.card,borderRadius:18,padding:"26px 10px 20px",border:"1px solid "+C.line,cursor:"pointer",textAlign:"center",transition:"all .25s",boxShadow:"0 2px 16px rgba(26,31,54,.04)",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(26,31,54,.08)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 16px rgba(26,31,54,.04)"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:t.bar}}/>
+          <div style={{fontSize:32,marginBottom:10}}>{t.icon}</div>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink}}>{t.l}</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:5,letterSpacing:1}}>{t.s}</div>
         </button>})}
       </div>
 
       {/* Tarot banner */}
-      <button onClick={function(){go("tarot")}} style={{width:"100%",background:"linear-gradient(135deg,#1E2A3A,#2D4A6A)",borderRadius:24,padding:"28px 24px",border:"none",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:20,marginBottom:28,position:"relative",overflow:"hidden",boxShadow:"0 6px 28px rgba(30,42,58,.15)",transition:"all .2s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
-        <div style={{position:"absolute",top:-30,right:-30,width:140,height:140,borderRadius:"50%",background:"radial-gradient(circle,rgba(123,167,204,.2),transparent)"}}/>
-        <div style={{fontSize:48,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
+      <button onClick={function(){go("tarot")}} style={{width:"100%",background:"linear-gradient(135deg,#1A1F36,#2C3E6B,#3D5280)",borderRadius:22,padding:"30px 26px",border:"none",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:22,marginBottom:28,position:"relative",overflow:"hidden",boxShadow:"0 8px 36px rgba(26,31,54,.18)",transition:"all .25s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+        <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle,rgba(184,151,106,.12),transparent)"}}/>
+        <div style={{position:"absolute",bottom:-20,left:"30%",width:100,height:100,borderRadius:"50%",background:"radial-gradient(circle,rgba(94,110,153,.1),transparent)"}}/>
+        <div style={{width:64,height:64,borderRadius:18,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
         <div style={{flex:1,position:"relative"}}>
           <div className="serif" style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:6}}>塔罗牌占卜</div>
-          <div className="sans" style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>22张大阿尔卡纳 · 凭直觉抽牌</div>
+          <div className="sans" style={{fontSize:12,color:"rgba(255,255,255,.4)",letterSpacing:1}}>22张大阿尔卡纳 · 凭直觉抽牌</div>
         </div>
-        <div style={{color:"#7BA7CC",fontSize:22,position:"relative"}}>›</div>
+        <div style={{width:32,height:32,borderRadius:10,background:"rgba(184,151,106,.15)",display:"flex",alignItems:"center",justifyContent:"center",color:C.gold,fontSize:16,position:"relative"}}>›</div>
       </button>
 
       {/* Type grid */}
       <div>
-        <div className="serif" style={{fontSize:13,color:C.muted,textAlign:"center",marginBottom:14,fontStyle:"italic"}}>four attachment styles</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {Object.keys(TI).map(function(k){return <div key={k} style={{padding:"16px",borderRadius:18,background:TI[k].bg,border:"1px solid "+C.line}}>
-            <div style={{fontSize:28,marginBottom:6}}>{TI[k].emoji}</div>
-            <div className="serif" style={{fontSize:15,fontWeight:700,color:TI[k].color}}>{TI[k].label}</div>
-            <div className="sans" style={{fontSize:11,color:C.sub,marginTop:2}}>{TI[k].desc}</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}><div style={{flex:1,height:1,background:C.line}}/><span className="sans" style={{fontSize:10,color:C.muted,letterSpacing:4,textTransform:"uppercase",fontWeight:600}}>Attachment Styles</span><div style={{flex:1,height:1,background:C.line}}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          {Object.keys(TI).map(function(k){return <div key={k} style={{padding:"18px",borderRadius:18,background:C.card,border:"1px solid "+C.line,boxShadow:"0 2px 12px rgba(26,31,54,.03)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <span style={{fontSize:24}}>{TI[k].emoji}</span>
+              <span className="serif" style={{fontSize:15,fontWeight:700,color:TI[k].color}}>{TI[k].label}</span>
+            </div>
+            <div className="sans" style={{fontSize:11,color:C.sub,lineHeight:1.5}}>{TI[k].desc}</div>
           </div>})}
         </div>
       </div>
@@ -717,9 +723,10 @@ function App() {
     </div>
 
     {/* Footer */}
-    <div style={{textAlign:"center",padding:"40px 20px 20px"}}>
+    <div style={{textAlign:"center",padding:"48px 20px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><div style={{width:24,height:1,background:C.line}}/><span className="sans" style={{fontSize:10,color:C.muted,letterSpacing:3}}>YIDU</span><div style={{width:24,height:1,background:C.line}}/></div>
       <div className="serif" style={{fontSize:14,color:C.muted,fontStyle:"italic"}}>已读 · Yidu</div>
-      <div className="sans" style={{fontSize:11,color:C.muted+"80",marginTop:4}}>不治病，就确诊，其他的你自己决定</div>
+      <div className="sans" style={{fontSize:11,color:C.muted+"60",marginTop:6}}>不治病，就确诊，其他的你自己决定</div>
     </div>
   </div>;
 }
