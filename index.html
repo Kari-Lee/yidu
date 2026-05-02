@@ -921,31 +921,31 @@ function App() {
         <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
         <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:24}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
         <div style={{display:"flex",gap:12,maxWidth:240,margin:"0 auto",marginBottom:20}}>
-          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,padding:"14px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
-          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={fDay} onChange={function(e){setFDay(e.target.value)}} className="sans" style={{flex:1,padding:"14px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={fDay} onChange={function(e){setFDay(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
         </div>
-        <button onClick={doFortune} disabled={!fMonth||!fDay} className="sans" style={{width:"100%",maxWidth:300,margin:"0 auto",padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:"#fff",background:(fMonth&&fDay)?C.wine:"#ddd",border:"none",cursor:"pointer",boxShadow:(fMonth&&fDay)?"0 8px 28px rgba(44,62,107,.15)":"none",display:"block"}}>{String.fromCharCode(26597,30475,36816,21183)} {"\uD83C\uDF19"}</button>
+        <button onClick={doFortune} disabled={!fMonth||!fDay} className="sans" style={{width:"100%",padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:"#fff",background:(fMonth&&fDay)?C.wine:"#ddd",border:"none",cursor:"pointer",boxShadow:(fMonth&&fDay)?"0 8px 28px rgba(44,62,107,.15)":"none"}}>{String.fromCharCode(26597,30475,36816,21183)} {"\uD83C\uDF19"}</button>
       </div>}
       {fortuneResult&&<div style={{animation:"fu .5s ease"}}>
         <div style={{background:"linear-gradient(135deg,#1A1F36,#2C3E6B)",borderRadius:24,padding:"36px 24px",color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
           <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 30%,rgba(184,151,106,.1),transparent 60%)"}}/>
           <div className="sans" style={{fontSize:12,color:C.gold,letterSpacing:3,marginBottom:12,position:"relative"}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
           <div style={{fontSize:32,position:"relative",letterSpacing:6}}>{Array(fortuneResult.stars).fill(null).map(function(_,i){return <span key={i}>{"\u2B50"}</span>})}{Array(5-fortuneResult.stars).fill(null).map(function(_,i){return <span key={i} style={{opacity:.2}}>{"\u2B50"}</span>})}</div>
-          <div className="sans" style={{display:"flex",gap:8,justifyContent:"center",marginTop:14,position:"relative"}}>{fortuneResult.kw.map(function(k,i){return <span key={i} style={{padding:"4px 14px",borderRadius:999,background:"rgba(255,255,255,.1)",fontSize:13,color:"rgba(255,255,255,.7)"}}>#{k}</span>})}</div>
+          <div className="sans" style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginTop:14,position:"relative"}}>{fortuneResult.kw.map(function(k,i){return <span key={i} style={{padding:"4px 14px",borderRadius:999,background:"rgba(255,255,255,.1)",fontSize:13,color:"rgba(255,255,255,.7)"}}>#{k}</span>})}</div>
         </div>
-        <div style={{display:"flex",gap:12,marginBottom:0}}>
-          <div style={{flex:1,...sec,marginTop:0}}>
+        <div style={{display:"flex",gap:12,marginBottom:16}}>
+          <div style={{flex:1,padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line}}>
             <div className="sans" style={{fontSize:11,fontWeight:700,color:C.sage,marginBottom:6}}>{String.fromCharCode(23452)}</div>
             <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.yi}</div>
           </div>
-          <div style={{flex:1,...sec,marginTop:0}}>
+          <div style={{flex:1,padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line}}>
             <div className="sans" style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:6}}>{String.fromCharCode(24524)}</div>
             <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.ji}</div>
           </div>
         </div>
-        <div style={{...sec}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.gold,marginBottom:6}}>{String.fromCharCode(24184,36816,33394)}</div><div className="sans" style={{fontSize:14,color:C.ink+"DD",lineHeight:1.7}}>{fortuneResult.color}</div></div>
-        <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)"}}><div className="sans" style={{fontSize:15,color:C.ink,lineHeight:2,fontWeight:500}}>{"\uD83D\uDCAC "}{fortuneResult.msg}</div></div>
-        <button onClick={function(){setFortuneResult(null)}} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,26597,19968,27425)} {"\u21BB"}</button>
+        <div style={{padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line,marginBottom:12}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.gold,marginBottom:6}}>{String.fromCharCode(24184,36816,33394)}</div><div className="sans" style={{fontSize:14,color:C.ink+"DD",lineHeight:1.7}}>{fortuneResult.color}</div></div>
+        <div style={{padding:"20px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:18,marginBottom:16}}><div className="sans" style={{fontSize:15,color:C.ink,lineHeight:2,fontWeight:500}}>{"\uD83D\uDCAC "}{fortuneResult.msg}</div></div>
+        <button onClick={function(){setFortuneResult(null)}} className="sans" style={{width:"100%",padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,26597,19968,27425)} {"\u21BB"}</button>
       </div>}
     </div>}
 
