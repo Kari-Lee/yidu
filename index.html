@@ -375,6 +375,7 @@ function App() {
   var [qianResult,setQianResult]=useState(null),[qianShaking,setQianShaking]=useState(false);
   var [bDate1,setBDate1]=useState({y:"",m:"",d:""}),[bDate2,setBDate2]=useState({y:"",m:"",d:""}),[baziResult,setBaziResult]=useState(null);
   var [fMonth,setFMonth]=useState(""),[fDay,setFDay]=useState(""),[fYear,setFYear]=useState(""),[fortuneResult,setFortuneResult]=useState(null);
+  var [calType,setCalType]=useState("solar"); // solar=公历 lunar=农历
 
   function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
   function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
@@ -875,9 +876,13 @@ function App() {
     {pg==="bazi"&&<div style={{animation:"fu .5s ease"}}>
       {!baziResult&&<div>
         <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:48,marginBottom:12}}>{"\uD83D\uDCAB"}</div>
+          <div style={{fontSize:48,marginBottom:12,lineHeight:1.4}}>{"\uD83D\uDCAB"}</div>
           <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20843,23383,36895,37197)}</div>
-          <div className="sans" style={{fontSize:13,color:C.sub}}>{String.fromCharCode(36755,20837,21452,26041,29983,26085,65292,30475,30475,32536,20998,20960,20309)}</div>
+          <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:16}}>{String.fromCharCode(36755,20837,21452,26041,29983,26085,65292,30475,30475,32536,20998,20960,20309)}</div>
+          <div style={{display:"inline-flex",borderRadius:12,border:"1px solid "+C.line,overflow:"hidden"}}>
+            <button onClick={function(){setCalType("solar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="solar"?C.wine:"#fff",color:calType==="solar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20844,21382)}</button>
+            <button onClick={function(){setCalType("lunar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="lunar"?C.wine:"#fff",color:calType==="lunar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20892,21382)}</button>
+          </div>
         </div>
         {[{label:String.fromCharCode(20320,30340,29983,26085),date:bDate1,setDate:setBDate1},{label:"Ta"+String.fromCharCode(30340,29983,26085),date:bDate2,setDate:setBDate2}].map(function(item,idx){return <div key={idx} style={{padding:"20px",background:C.card,borderRadius:20,boxShadow:"0 2px 20px rgba(26,31,54,.04)",border:"1px solid "+C.line,marginBottom:12}}>
           <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:12}}>{item.label}</div>
@@ -917,9 +922,13 @@ function App() {
     {/* ═══ FORTUNE (今日运势) ═══ */}
     {pg==="fortune"&&<div style={{animation:"fu .5s ease"}}>
       {!fortuneResult&&<div style={{textAlign:"center"}}>
-        <div style={{fontSize:56,marginBottom:16,lineHeight:1.2}}>{"\uD83C\uDF19"}</div>
+        <div style={{fontSize:48,marginBottom:20,paddingTop:10}}>{"\uD83C\uDF19"}</div>
         <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
-        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:24}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
+        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:16}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
+        <div style={{display:"inline-flex",borderRadius:12,border:"1px solid "+C.line,overflow:"hidden",marginBottom:20}}>
+          <button onClick={function(){setCalType("solar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="solar"?C.wine:"#fff",color:calType==="solar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20844,21382)}</button>
+          <button onClick={function(){setCalType("lunar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="lunar"?C.wine:"#fff",color:calType==="lunar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20892,21382)}</button>
+        </div>
         <div style={{display:"flex",gap:10,maxWidth:300,margin:"0 auto",marginBottom:20}}>
           <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(24180)} value={fYear||""} onChange={function(e){setFYear(e.target.value)}} className="sans" style={{flex:2,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
           <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
