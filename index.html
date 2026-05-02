@@ -482,6 +482,8 @@ function App() {
 
     {/* ═══ HOME ═══ */}
     {pg==="home"&&<div style={{animation:"fu .5s ease"}}>
+      {/* Signature */}
+      <div className="sans" style={{textAlign:"center",fontSize:12,color:C.muted,marginBottom:16,lineHeight:1.8,letterSpacing:.5}}>{String.fromCharCode(36825,20010,32593,31449,26368,32456,20250,35299,25937,19975,21315,22312,29233,24773,20013,36855,33579,30340,20154)}<br/>{String.fromCharCode(20294,21807,29420,25937,19981,20102,20316,32773,19968,20154)}</div>
       {/* Daily quote */}
       <div style={{padding:"24px 26px",background:C.card,borderRadius:22,marginBottom:24,position:"relative",overflow:"hidden",border:"1px solid "+C.line,boxShadow:"0 2px 16px rgba(26,31,54,.04)"}}>
         <div style={{position:"absolute",top:-30,right:-20,width:100,height:100,borderRadius:"50%",background:"radial-gradient(circle,rgba(184,151,106,.06),transparent)"}}/>
