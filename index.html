@@ -461,18 +461,17 @@ function App() {
     <style>{CSS}</style>
 
     {/* ═══ HEADER ═══ */}
-    <div style={{padding:"52px 24px 10px",textAlign:"center",position:"relative"}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:260,background:"linear-gradient(180deg,#F5F7FA,#FFFFFF)",zIndex:0}}/>
-      <div onClick={goHome} style={{cursor:"pointer",position:"relative",zIndex:1}}>
+    <div style={{padding:"48px 24px 16px",textAlign:"center",background:"linear-gradient(180deg,#F5F7FA 0%,#FFFFFF 100%)"}}>
+      <div onClick={goHome} style={{cursor:"pointer"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 16px",borderRadius:999,background:"rgba(44,62,107,.04)",marginBottom:14}}>
           <span style={{width:5,height:5,borderRadius:"50%",background:C.gold}}/>
           <span style={{fontSize:10,letterSpacing:5,color:C.muted,fontWeight:600,textTransform:"uppercase"}} className="sans">attachment analyzer</span>
         </div>
-        <h1 className="serif" style={{fontSize:56,fontWeight:900,color:C.ink,letterSpacing:8,lineHeight:1}}>已读</h1>
-        <p className="sans" style={{fontSize:13,color:C.sub,marginTop:12,fontWeight:500,letterSpacing:2}}>Ta不是不爱你 — 是你们都有病</p>
+        <h1 className="serif" style={{fontSize:52,fontWeight:900,color:C.ink,letterSpacing:8,lineHeight:1}}>已读</h1>
+        <p className="sans" style={{fontSize:13,color:C.sub,marginTop:10,fontWeight:500,letterSpacing:2}}>Ta不是不爱你 — 是你们都有病</p>
       </div>
-      {pg!=="home"&&<div style={{position:"relative",zIndex:1,textAlign:"left",marginTop:18}}>
-        <span onClick={goHome} className="sans" style={{fontSize:14,color:C.gold,fontWeight:700,cursor:"pointer",padding:"6px 0",display:"inline-block"}}>{"< "}{String.fromCharCode(36820)}{String.fromCharCode(22238)}{String.fromCharCode(39318)}{String.fromCharCode(39029)}</span>
+      {pg!=="home"&&<div style={{textAlign:"left",marginTop:16,maxWidth:500,margin:"16px auto 0",paddingLeft:16}}>
+        <span onClick={goHome} className="sans" style={{fontSize:14,color:C.gold,fontWeight:700,cursor:"pointer",display:"inline-block",padding:"6px 0"}}>{"< "}{String.fromCharCode(36820,22238,39318,39029)}</span>
       </div>}
     </div>
 
@@ -557,7 +556,7 @@ function App() {
     {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"4px 10px",borderRadius:8,background:C.bg,color:C.sub,fontSize:12,fontWeight:600}}>{"< "}{String.fromCharCode(19978,19968,39064)}</button>}
+          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"6px 14px",borderRadius:10,background:C.warm,color:C.wine,fontSize:13,fontWeight:700,border:"1px solid "+C.line,cursor:"pointer"}}>{"< "}{String.fromCharCode(19978,19968,39064)}</button>}
           <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
         </div>
         <span className="sans" style={{fontSize:12,color:C.muted}}>{qi+1}/{QUIZ.length}</span>
