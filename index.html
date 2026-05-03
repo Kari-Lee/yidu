@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>已读 Yidu</title>
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -19,6 +17,13 @@ input:focus,textarea:focus{outline:none}
 textarea::placeholder,input::placeholder{color:#BBB}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
+#splash{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff}
+#splash h1{font-family:'Playfair Display',Georgia,serif;font-size:56px;font-weight:900;color:#0A0A0A;letter-spacing:8px;margin-bottom:12px}
+#splash p{font-size:12px;color:#AAA;letter-spacing:3px}
+#splash .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#CCC;margin:24px 3px 0;animation:ldot .8s ease infinite}
+#splash .dot:nth-child(2){animation-delay:.15s}
+#splash .dot:nth-child(3){animation-delay:.3s}
+@keyframes ldot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-6px)}}
 @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -28,7 +33,24 @@ input[type=number]{-moz-appearance:textfield}
 </style>
 </head>
 <body>
+<div id="splash"><h1>已读</h1><p>Ta不是不爱你 — 是你们都有病</p><div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
 <div id="root"></div>
+<script>
+function loadScript(src,cb){var s=document.createElement("script");s.src=src;s.onload=cb;document.head.appendChild(s);}
+loadScript("https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js",function(){
+  loadScript("https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js",function(){
+    loadScript("https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js",function(){
+      var script=document.querySelector('script[type="text/babel"]');
+      if(script&&window.Babel){
+        var compiled=Babel.transform(script.textContent,{presets:["react"]}).code;
+        var fn=new Function(compiled);
+        document.getElementById("splash").style.display="none";
+        fn();
+      }
+    });
+  });
+});
+</script>
 <script type="text/babel">
 const { useState, useEffect } = React;
 
