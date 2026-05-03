@@ -23,6 +23,7 @@ input[type=number]{-moz-appearance:textfield}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes glow{0%,100%{box-shadow:0 0 30px rgba(184,151,106,.12)}50%{box-shadow:0 0 50px rgba(184,151,106,.25)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
 @keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
@@ -194,52 +195,42 @@ JSON格式：{"stage":"当前阶段","stage_desc":"描述","predictions":[{"time
 };
 
 async function callAI(sys, message, images) {
-  var body = { system: sys, message: message };
-  if (images && images.length > 0) body.images = images;
-  var r = await fetch("/api/chat", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  var d = await r.json();
-  if (!r.ok) throw new Error(d.error || "API error");
-  var raw = d.text || "";
-  if (!raw) throw new Error("AI没有返回内容，请重试");
-  // Remove <think>...</think> tags from MiniMax responses
-  raw = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  // Handle unclosed <think> tag (response cut off)
-  if (raw.indexOf("<think>") !== -1) raw = raw.substring(0, raw.indexOf("<think>")).trim();
-  // Clean markdown fences
-  raw = raw.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
-  // Strategy 1: try direct parse
-  try { return JSON.parse(raw); } catch(e) {}
-  // Strategy 2: find first { and last }
-  var first = raw.indexOf("{");
-  var last = raw.lastIndexOf("}");
-  if (first !== -1 && last > first) {
-    try { return JSON.parse(raw.substring(first, last + 1)); } catch(e) {}
+  var maxRetries = 2;
+  for (var attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      var body = { system: sys, message: message };
+      if (images && images.length > 0) body.images = images;
+      var r = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || "API error");
+      var raw = d.text || "";
+      if (!raw) throw new Error("AI没有返回内容");
+      raw = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      if (raw.indexOf("<think>") !== -1) raw = raw.substring(0, raw.indexOf("<think>")).trim();
+      raw = raw.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+      try { return JSON.parse(raw); } catch(e) {}
+      var first = raw.indexOf("{"); var last = raw.lastIndexOf("}");
+      if (first !== -1 && last > first) { try { return JSON.parse(raw.substring(first, last + 1)); } catch(e) {} }
+      var firstA = raw.indexOf("["); var lastA = raw.lastIndexOf("]");
+      if (firstA !== -1 && lastA > firstA) { try { return JSON.parse(raw.substring(firstA, lastA + 1)); } catch(e) {} }
+      if (first !== -1 && last > first) {
+        var attempt2 = raw.substring(first, last + 1).replace(/[\x00-\x1f]/g, function(c) {
+          if (c === '\n') return '\\n'; if (c === '\r') return '\\r'; if (c === '\t') return '\\t'; return '';
+        });
+        try { return JSON.parse(attempt2); } catch(e) {}
+      }
+      if (first === -1 && raw.length > 10) return { text: raw, fallback: true };
+      if (attempt < maxRetries) continue; // retry
+      throw new Error("AI" + String.fromCharCode(22238,22797,26684,24335,24322,24120));
+    } catch(err) {
+      if (attempt >= maxRetries) throw err;
+      // wait 1 second before retry
+      await new Promise(function(res){setTimeout(res,1000)});
+    }
   }
-  // Strategy 3: find first [ and last ]
-  var firstA = raw.indexOf("[");
-  var lastA = raw.lastIndexOf("]");
-  if (firstA !== -1 && lastA > firstA) {
-    try { return JSON.parse(raw.substring(firstA, lastA + 1)); } catch(e) {}
-  }
-  // Strategy 4: fix unescaped newlines and control chars in JSON strings
-  if (first !== -1 && last > first) {
-    var attempt = raw.substring(first, last + 1);
-    attempt = attempt.replace(/[\x00-\x1f]/g, function(c) {
-      if (c === '\n') return '\\n';
-      if (c === '\r') return '\\r';
-      if (c === '\t') return '\\t';
-      return '';
-    });
-    try { return JSON.parse(attempt); } catch(e) {}
-  }
-  // Strategy 5: if no JSON found, wrap plain text as a basic response
-  if (first === -1 && raw.length > 10) {
-    return { text: raw, fallback: true };
-  }
-  throw new Error("AI回复异常: " + raw.substring(0, 100));
 }
 
 function calcQuiz(ans) {
@@ -458,6 +449,13 @@ function App() {
   var curC=(TABS.find(function(t){return t.id===pg})||{}).c||C.wine;
   var hasInput=text.trim()||imgs.length;
 
+  function ShareBar(){return <div style={{textAlign:"center",margin:"18px 0 8px"}}>
+    <div className="sans" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 22px",borderRadius:999,background:"linear-gradient(135deg,"+C.gold+"15,"+C.plum+"15)",fontSize:13,color:C.sub,cursor:"pointer"}} onClick={function(){if(navigator.share){navigator.share({title:String.fromCharCode(24050,35835)+" Yidu",url:"https://yidu.click"}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText("https://yidu.click").then(function(){alert(String.fromCharCode(38142,25509,24050,22797,21046,65292,24555,21435,20998,20139,32473,26379,21451,21543))})}}}>
+      {String.fromCharCode(128242)} {String.fromCharCode(25130,22270,20998,20139,32467,26524)}
+    </div>
+    <div className="sans" style={{fontSize:11,color:C.muted,marginTop:8}}>{String.fromCharCode(25226,32467,26524,36716,32473,84,97,30475,65292,30475,84,97,30340,21453,24212,23601,30693,36947,20934,19981,20934)}</div>
+  </div>}
+
 
   return <div className="sans" style={{minHeight:"100vh",background:C.bg,paddingBottom:80}}>
     <style>{CSS}</style>
@@ -583,9 +581,13 @@ function App() {
         {Object.keys(qr.scores).map(function(k){var pct=Math.round((qr.scores[k]/QUIZ.length)*100);return <div key={k} style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}><span style={{fontSize:18,width:26}}>{TI[k].emoji}</span><span className="sans" style={{fontSize:13,width:50,color:C.sub,fontWeight:600}}>{TI[k].label}</span><div style={{flex:1,height:8,background:C.line,borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:TI[k].grad,borderRadius:99,transition:"width .8s"}}/></div><span className="sans" style={{fontSize:14,color:TI[k].color,fontWeight:700,width:36,textAlign:"right"}}>{pct}%</span></div>})}
       </div>
       <div style={{...sec,background:TI[qr.type].bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>💡 给你的话</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].advice}</div></div>
-      <div style={{display:"flex",gap:10,marginTop:18}}>
+      <ShareBar/>
+      <div style={{display:"flex",gap:10,marginTop:8}}>
         <button onClick={function(){setQi(0);setQa([]);setQr(null)}} className="sans" style={{flex:1,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重测 ↻</button>
-        <button onClick={function(){go("diagnose")}} className="sans" style={{flex:1,padding:14,background:C.wine,color:"#fff",border:"none",borderRadius:16,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px "+C.wine+"30"}}>聊天记录确诊 🩺</button>
+        <button onClick={function(){go("diagnose")}} className="sans" style={{flex:1,padding:14,background:C.wine,color:"#fff",border:"none",borderRadius:16,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px "+C.wine+"30"}}>{String.fromCharCode(32842,22825,35760,24405,30830,35786)} {"\uD83E\uDE7A"}</button>
+      </div>
+      <div style={{textAlign:"center",marginTop:12}}>
+        <span className="sans" onClick={function(){if(navigator.clipboard){navigator.clipboard.writeText("https://yidu.click").then(function(){alert(String.fromCharCode(38142,25509,24050,22797,21046,65281,21457,32473,84,97,35753,84,97,20063,27979,19968,19979))})}}} style={{fontSize:13,color:C.gold,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(128279)} {String.fromCharCode(35753,84,97,20063,26469,27979,65292,30475,30475,20320,20204,26159,21738,31181,32452,21512)}</span>
       </div>
     </div>}
 
@@ -764,8 +766,19 @@ function App() {
     </div>}
 
     {/* Loading */}
-    {pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="loading"&&<div style={{textAlign:"center",padding:"80px 20px",animation:"fu .4s ease"}}>
-      <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:999,background:C.card,boxShadow:"0 4px 24px rgba(45,42,50,.06)",border:"1px solid "+C.line}}><Dots/><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:500}}>{lm}</span></div>
+    {pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="loading"&&<div style={{animation:"fu .4s ease"}}>
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:999,background:C.card,boxShadow:"0 4px 24px rgba(45,42,50,.06)",border:"1px solid "+C.line}}><Dots/><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:500}}>{lm}</span></div>
+      </div>
+      {/* Skeleton */}
+      <div style={{opacity:.5}}>
+        <div style={{display:"flex",gap:12,marginBottom:14}}>
+          <div style={{flex:1,height:140,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+          <div style={{flex:1,height:140,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+        </div>
+        <div style={{height:80,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite",marginBottom:14}}/>
+        <div style={{height:120,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+      </div>
     </div>}
 
     {/* ═══ DIAGNOSE RESULT ═══ */}
@@ -778,7 +791,8 @@ function App() {
       </div>
       <div style={{...sec,background:(TI[res.user_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 给你</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.user_advice}</div></div>
       <div style={{...sec,background:(TI[res.partner_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🎯 应对Ta</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.partner_advice}</div></div>
-      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
     </div>}
 
     {/* ═══ TRANSLATE RESULT ═══ */}
@@ -795,6 +809,7 @@ function App() {
         </div>})}
         <div style={{marginTop:12,padding:"10px 14px",background:"#FFF5F3",borderRadius:12,fontSize:13}} className="sans"><span style={{fontWeight:800,color:C.rose}}>最可能：{tr.most_likely}</span> <span style={{color:C.sub}}>{tr.why}</span></div>
       </div>})}
+      <ShareBar/>
       <button onClick={resetInput} className="sans" style={{width:"100%",padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
     </div>}
 
@@ -819,7 +834,8 @@ function App() {
         </div>}
         {!res.danger&&<div style={{padding:18,background:"#F0FFF4",borderRadius:14}} className="sans"><div style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.reason}</div></div>}
       </div>
-      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
     </div>}
 
     {/* ═══ PREDICT RESULT ═══ */}
@@ -840,7 +856,8 @@ function App() {
         <div style={{flex:1,...sec,background:"#FFF5F3",border:"none"}}><div className="sans" style={{fontSize:12,fontWeight:700,color:C.rose,marginBottom:4}}>最差</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.worst}</div></div>
       </div>
       <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 你现在应该做的一件事</div><div className="sans" style={{fontSize:15,fontWeight:600,color:C.ink,lineHeight:1.9}}>{res.todo}</div></div>
-      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:18,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
     </div>}
 
     {/* ═══ QIAN (月老灵签) ═══ */}
