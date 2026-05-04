@@ -1,0 +1,971 @@
+import { useState, useEffect } from "react";
+
+/* ═══ DESIGN SYSTEM ═══ */
+const C = { bg: "#F0F2F5", card: "rgba(255,255,255,.55)", wine: "#2D3436", gold: "#B8860B", plum: "#636E72", sage: "#00B894", rose: "#E17055", ink: "#1A1A2E", sub: "#636E72", muted: "#B2BEC3", line: "rgba(255,255,255,.5)", warm: "rgba(255,255,255,.35)" };
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F0F2F5;overflow-x:hidden}
+#parallax-bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;background:radial-gradient(ellipse at 25% 20%,rgba(116,185,255,.12),transparent 50%),radial-gradient(ellipse at 75% 60%,rgba(162,155,254,.1),transparent 50%),radial-gradient(ellipse at 50% 90%,rgba(0,184,148,.08),transparent 50%),radial-gradient(ellipse at 80% 10%,rgba(253,203,110,.08),transparent 40%);transition:transform .1s ease-out}
+.app-wrap{position:relative;z-index:1}
+.glass{background:rgba(255,255,255,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.6);box-shadow:0 8px 32px rgba(31,38,135,.06),inset 0 1px 0 rgba(255,255,255,.8)}
+.glass-strong{background:rgba(255,255,255,.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 32px rgba(31,38,135,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+@keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes breathe{0%,100%{opacity:.08}50%{opacity:.15}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(184,134,11,.08)}50%{box-shadow:0 0 40px rgba(184,134,11,.15)}}
+@keyframes orbFloat{0%{transform:translate(0,0)}25%{transform:translate(15px,-25px)}50%{transform:translate(-8px,-12px)}75%{transform:translate(-18px,8px)}100%{transform:translate(0,0)}}
+textarea:focus{outline:none}textarea::placeholder{color:${C.muted}}
+.fu{animation:fu .5s ease both}
+.serif{font-family:'Playfair Display',Georgia,serif}
+.sans{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif}
+`;
+
+/* ═══ DATA ═══ */
+const QUOTES = [
+  "Ta说「我需要空间」的意思是：你不在的空间",
+  "已读不回不是忙，是忙着不想回你",
+  "「你想多了」= 你想对了但我不想承认",
+  "安全型的人不刷这个App",
+  "混乱型：上午说分手，下午问你晚上吃什么",
+  "焦虑型+回避型=一场精心编排的互相折磨",
+  "你删了又加的不是Ta，是你的自尊",
+  "「到时候再说」翻译：永远不会到那个时候",
+  "「我没生气」= 我气得要死但你猜不到算你输",
+  "回避型谈恋爱就像猫：你追Ta跑，你走Ta看",
+  "焦虑型发了三条消息没回：已经在想葬礼穿什么了",
+  "Ta不是高冷，是对你冷",
+  "「忙完了联系你」翻译：忙完了也不会联系你",
+  "焦虑型最大的技能：对方还没做任何事就开始受伤",
+  "安全型是怎么做到的？Ta们是NPC吗",
+  "每个焦虑型手机里都有一个编辑好但没发出去的消息",
+  "Ta说「我们冷静一下」= Ta已经冷静了，需要冷静的是你",
+  "混乱型谈恋爱像坐过山车——区别是过山车还有安全带",
+  "不回消息是在忙，秒回别人是在选择",
+  "分手后焦虑型：发了500字长文。回避型：已读。",
+  "「我觉得我们需要谈谈」这句话能让回避型原地去世",
+  "你反复看聊天记录不是在回忆，是在找证据证明Ta爱你",
+  "Ta说「随便」的时候你最好什么都别随便",
+  "回避型的爱情观：我爱你但你别靠太近谢谢",
+  "焦虑型的手机永远有电，因为Ta不敢错过任何一条消息",
+  "Ta对你忽冷忽热不是在考验你，是Ta自己也不知道要什么",
+  "「你觉得呢」= 我有标准答案但我要你先猜",
+  "所有「算了没事」的背后都是「有事很大的事」",
+  "回避型分手后：终于自由了。三天后：有点想Ta了。一周后：算了不想了",
+  "你不是恋爱脑，是焦虑型依恋在控制你的大脑",
+];
+var _today = new Date(); var _seed = _today.getFullYear() * 10000 + (_today.getMonth()+1) * 100 + _today.getDate();
+const DAILY = QUOTES[_seed % QUOTES.length];
+
+const QUIZ = [
+  { q: "Ta没回消息过了2小时，你会？", a: ["反复看手机越来越焦虑", "告诉自己Ta在忙但心里不舒服", "该干嘛干嘛等Ta回", "先生气然后又担心Ta出事了"] },
+  { q: "吵架之后你通常会？", a: ["立刻想和好受不了冷战", "假装没事其实很难受", "冷静下来再沟通", "一会想分手一会想道歉"] },
+  { q: "Ta突然对你特别温柔，你的第一反应？", a: ["开心但立刻想Ta是不是做了对不起我的事", "有点不自在想退后一步", "享受当下觉得很幸福", "感动但又觉得这不会持久的"] },
+  { q: "关于说「我爱你」这件事：", a: ["经常说也需要经常听到", "想说但怕对方觉得太重", "在合适时候自然地说", "说不出口觉得说了就输了"] },
+  { q: "当Ta跟你分享工作上的烦恼时，你会？", a: ["全心投入帮Ta分析希望Ta也这样对我", "听着但不太知道怎么回应", "认真倾听然后给建议或安慰", "很想帮忙但又怕说错话让关系变糟"] },
+  { q: "你觉得亲密关系中最重要的是？", a: ["确定感——知道Ta爱我", "独立——各自有空间", "信任——彼此坦诚", "说不清——有时想靠近有时想逃"] },
+  { q: "和Ta在一起时你经常会想：", a: ["Ta是不是真的喜欢我", "我们是不是待在一起太久了", "我很享受和Ta在一起的时光", "我到底想不想和这个人在一起"] },
+  { q: "Ta说「我想一个人待一会」你会？", a: ["觉得被抛弃很受伤", "松一口气终于有自己的时间", "尊重但约好之后再聊", "嘴上说好心里揣测Ta不满"] },
+  { q: "表达需求时你通常？", a: ["旁敲侧击希望Ta主动察觉", "很少表达怕被拒绝", "直接说出来", "想说但一开口就变成抱怨"] },
+  { q: "关系中遇到矛盾你的本能反应是？", a: ["紧紧抓住不放必须现在解决", "先回避等情绪过去再说", "面对问题找到双方都接受的方案", "又想解决又想逃跑最后什么都没做"] },
+  { q: "Ta和异性朋友单独吃饭你的反应？", a: ["很不安需要Ta报备细节", "有点介意但不想表现出来", "相信Ta没什么大不了", "表面说没事其实暗暗生闷气然后又觉得自己反应过度"] },
+  { q: "Ta出差一周，你会？", a: ["每天要视频通话不然睡不着", "反而觉得轻松自在", "想Ta但也享受独处的时间", "前两天很想Ta后面突然觉得一个人也挺好甚至有点不想Ta回来"] },
+  { q: "关于肢体接触你的态度是？", a: ["非常需要经常想牵手拥抱", "能接受但有时觉得过于亲密不自在", "自然地表达和接受", "有时特别渴望有时又觉得被侵犯了空间"] },
+  { q: "你对「依赖」这个词的感觉是？", a: ["很正常相爱的人就应该互相依赖", "有点恐惧不想依赖任何人", "适度的依赖是健康的", "既渴望依赖又害怕依赖"] },
+  { q: "关系中你最怕的是？", a: ["被抛弃被替代", "失去自我和自由", "不被理解不被尊重", "什么都怕又什么都想要"] },
+  { q: "回顾过去的感情你觉得自己？", a: ["总是付出更多更在乎的那个", "总是先想离开的那个", "双方比较平等", "每段都不一样很混乱有时付出有时逃避"] },
+  { q: "当Ta做了让你失望的事你会？", a: ["很受伤但不舍得离开反复纠结", "在心里默默记一笔慢慢关上心门", "表达失望讨论怎么改善", "大吵一架然后又后悔然后又想吵"] },
+  { q: "你理想中的关系距离是？", a: ["黏在一起每件事都分享", "各自独立有各自的生活圈", "亲密但有边界", "忽远忽近说不准今天想黏明天想逃"] },
+  { q: "Ta夸你「你今天好好看」你会？", a: ["开心但马上想那平时呢", "有点不好意思想转移话题", "谢谢开心地接受", "先开心然后怀疑Ta是不是有事求我"] },
+  { q: "如果用一句话形容你在感情中的样子：", a: ["我在门口等你回来的灯", "我是你走不进来的城堡", "我是和你一起晒太阳的猫", "我是一会开门一会关门的风"] },
+  { q: "半夜三点你突然很想Ta，你会？", a: ["立刻发消息忍不住", "翻一下聊天记录但不发消息", "记在心里明天告诉Ta", "打了一段话又删掉反复几次最后锁屏"] },
+  { q: "Ta在朋友面前没提你，你会？", a: ["很受伤觉得Ta不重视这段关系", "觉得正常没必要到处宣传", "无所谓Ta私下对你好就行", "先觉得没什么后来越想越不对劲"] },
+  { q: "你们第一次说「我喜欢你」是？", a: ["你先说的你忍不住", "Ta先说的你不敢先开口", "水到渠成双方都自然表达", "到现在也没正式说过但好像在一起了"] },
+  { q: "Ta看手机时笑了一下，你会？", a: ["想知道在看什么在跟谁聊", "不关心尊重隐私", "随口问一句怎么了这么开心", "表面没反应心里已经编了三集电视剧"] },
+];
+const TMAP = ["anxious", "avoidant", "secure", "disorganized"];
+const TI = {
+  anxious: { label: "焦虑型", emoji: "🔥", color: "#E17055", grad: "linear-gradient(135deg,#E17055,#D63031,#C0392B)", bg: "rgba(225,112,85,.08)", desc: "恋爱中的人形追踪器", traits: ["已读不回就心梗","需要24小时情绪直播","把安全感外包给别人"], detail: "你的恋爱模式是：Ta回消息你就是世界上最幸福的人，Ta不回你就开始写遗书。你不是在谈恋爱，你是在考核Ta的KPI——回复速度、语气热度、表情包含量，每一项都要打分。你手机里有一个文件夹专门截图Ta说过的甜言蜜语，低落的时候反复翻看，像一个守财奴数金币。你最大的才华是在对方还没做任何事的时候就把自己伤透了。你发的每条消息都在等回复，你的每次心跳都在等确认。", advice: "你的安全感不应该是一个需要别人每天给你充电的手机。试试把注意力放回自己身上——你在Ta出现之前也活得好好的，别忘了。下次想发第三条追问消息的时候，放下手机去洗个澡，出来如果Ta还没回，再去做个面膜。" },
+  avoidant: { label: "回避型", emoji: "🧊", color: "#0984E3", grad: "linear-gradient(135deg,#74B9FF,#0984E3,#0652DD)", bg: "rgba(225,112,85,.08)", desc: "感情中的专业逃跑运动员", traits: ["一亲近就窒息","把冷漠包装成独立","关门速度比开门快"], detail: "你谈恋爱就像逛超市：看看可以，别让我买单。一旦有人真的靠近你，你体内的警报系统就会启动——「太近了太近了太近了」。你不是不会爱，你只是把爱当成了一种会让你失控的危险品。你最擅长的事是在关系升温的时候踩刹车，然后告诉自己「我只是需要空间」。你的空间大到可以停航母。分手的时候你比谁都洒脱，但三个月后的某个深夜你会突然想起Ta——然后翻个身继续睡。", advice: "你以为的独立其实是恐惧穿了一件很酷的外套。试着在下次想逃跑的时候，不是真的逃，而是告诉Ta「我现在有点不舒服，但不是因为你」。说出来不会死，但不说可能真的会一个人死。" },
+  secure: { label: "安全型", emoji: "🌿", color: "#00B894", grad: "linear-gradient(135deg,#55EFC4,#00B894,#00896F)", bg: "rgba(0,184,148,.08)", desc: "你到底是怎么做到的", traits: ["情绪稳定得像NPC","不作不闹不猜忌","让其他类型自愧不如"], detail: "你是亲密关系里的大熊猫——稀有、珍贵、人人都说好但很少有人真正见过。Ta不回消息你不会崩溃，Ta要独处你不会多想，吵架了你还能理性沟通？？？你确定你是人类吗？你的存在让其他三种类型的人感到深深的嫉妒和困惑。你可能是在一个充满爱和安全感的家庭长大的，也可能是做了很多自我成长——不管哪种，你都欠其他人一个教程。", advice: "你几乎不需要什么建议。但记住：安全型不代表没有需求。你也可以示弱，也可以撒娇，也可以偶尔无理取闹一下。别总当那个「懂事的人」，懂事久了会内伤。" },
+  disorganized: { label: "混乱型", emoji: "🌀", color: "#6C5CE7", grad: "linear-gradient(135deg,#A29BFE,#6C5CE7,#5542D6)", bg: "rgba(225,112,85,.08)", desc: "爱情里的薛定谔的猫", traits: ["上午520下午再见","渴望亲密又恐惧亲密","连自己都猜不透自己"], detail: "你的恋爱状态是量子态——在「我超爱Ta」和「我要逃跑」之间不断坍缩。早上你觉得Ta就是你的灵魂伴侣，下午你就在想分手后的单身生活。你不是善变，你是内心有两个小人在24小时打架，而且打得旗鼓相当谁也赢不了。你的前任们最崩溃的一点是：永远不知道今天醒来的你是天使版还是恶魔版。你最大的问题不是不爱，是爱得太复杂连你自己都解不开。", advice: "首先你不是坏人也不是疯子，你只是在过去的关系里学会了一种很拧巴的爱的方式。建议认真考虑找一个心理咨询师——不是因为你有病，是因为你值得有人帮你把内心那两个打架的小人调解一下。在那之前，做任何冲动决定之前，给自己24小时冷静期。" },
+};
+
+/* ═══ TAROT ═══ */
+const TAROT = [
+  { name:"愚者", num:"0", icon:"🃏", element:"风", up:"新的开始正在到来，放下过去的包袱，带着好奇心迎接这段关系的下一个篇章。宇宙正在为你清理道路，过去那些纠结、犹豫、后悔，都该留在身后了。愚者不是傻，是敢于在未知中前行的勇气。你需要做的只是迈出那一步，哪怕脚下是悬崖——因为你可能会发现自己其实会飞。", rev:"你在逃避面对关系中的现实问题，盲目乐观可能让你错过重要的信号。你以为的「顺其自然」其实是「不敢面对」。停下来问自己：你是在勇敢地前进，还是在不负责任地逃避？有时候最危险的事不是往前走，而是闭着眼睛走。", love:"感情中需要冒险精神，但不是赌博。真正的勇敢是睁着眼睛跳进去。", energy:"轻盈、自由、充满可能性、初心未泯", action:"做一件你一直想做但不敢做的事——可以是一句话、一个拥抱、或一个决定", timing:"新月前后能量最强，适合开始新的感情阶段" },
+  { name:"魔术师", num:"I", icon:"✨", element:"水星", up:"你有能力创造你想要的关系。主动沟通和表达会带来意想不到的转机。所有的工具都已经在你手中了——你的语言、你的真诚、你的洞察力。关键是你敢不敢用，愿不愿意把那些藏在心里的话说出来。魔术师不是靠运气，是靠技巧和勇气。", rev:"小心操控和不真诚。你或Ta可能在这段关系中耍了一些小心机——那些「我没生气」「你想多了」「随便」背后的弯弯绕绕。语言可以是桥梁，也可以是武器。你选哪一个？如果你发现自己在精心措辞每一句话来操控对方的反应，那你玩的不是恋爱，是棋。", love:"表达是最被低估的恋爱技能。会说话的人不一定会爱，但会爱的人一定会好好说话。", energy:"创造力旺盛、掌控感强、沟通力活跃", action:"今天就把你想说但一直没说的话说出来。不要修饰，不要包装，直接说。", timing:"水星顺行时沟通更顺畅，适合重要对话" },
+  { name:"女祭司", num:"II", icon:"🌙", element:"月亮", up:"相信你的直觉。你内心深处已经知道答案了，只是还不愿意承认。那个在你胸口一闪而过的感觉、那个午夜突然惊醒的不安、那个看到Ta手机时微微收紧的胃——这些都不是你「想多了」，是你的潜意识在用身体跟你说话。安静下来，听它说什么。", rev:"你在忽略内心的声音，被表面的甜言蜜语蒙蔽了双眼。你的身体已经在告诉你真相了——那些胃痛、失眠、莫名的不安，都是信号。你不是不知道答案，你是不想知道。因为知道了就必须做出选择，而选择意味着可能失去。", love:"最了解你感情状况的人，其实是你自己。你只是一直在假装没听到自己内心的声音。", energy:"神秘、内省、直觉敏锐、潜意识活跃", action:"睡前写下3个关于这段感情的直觉，不要审判它们，不要合理化它们，只是写下来。", timing:"满月时直觉最准，适合做感情的内心审视" },
+  { name:"皇后", num:"III", icon:"🌹", element:"金星", up:"这段感情正在孕育美好的东西。给彼此更多的温柔和耐心。爱是需要浇灌的花园，不是自动售货机——你不能投一枚硬币就指望掉出一罐幸福。它需要时间、阳光、偶尔的风雨，和很多很多的耐心。好消息是，种子已经发芽了。", rev:"你在这段关系中过度付出，忽视了自己的需求。你以为的无私，其实是另一种形式的控制——「我对你这么好你怎么能不爱我」。这不是爱，是投资，而且你在期待回报。先把爱给自己吧，一个连自己都不疼的人，给出去的爱都带着隐形的账单。", love:"健康的爱是溢出来的，不是挤出来的。你得先把自己的杯子装满。", energy:"丰盛、温柔、滋养、创造力旺盛", action:"今天为自己做一件纯粹让自己开心的事——不是因为值得，是因为你想。", timing:"金星入相位时感情升温，适合表达爱意" },
+  { name:"皇帝", num:"IV", icon:"👑", element:"白羊座", up:"是时候在关系中建立健康的边界了。稳定和安全感正在建立中。结构不是束缚，是让爱有地方安全生长的容器。就像一棵树需要土壤，感情需要边界。你不需要为设立底线而道歉——这恰恰是你尊重自己和对方的方式。", rev:"控制欲太强了。不管是你还是Ta，过度掌控正在窒息这段关系。爱情不是你的公司，不需要KPI和绩效考核。你不能用「我是为你好」来包装你的控制欲。当你开始审查Ta的手机、规定Ta的社交、要求Ta汇报行踪的时候，你经营的不是爱情，是监狱。", love:"安全感不是靠控制得到的，是靠信任建立的。你越紧握，沙子漏得越快。", energy:"权威、稳固、结构化、但可能僵硬", action:"列出你在这段关系中不可妥协的3条底线，然后温和但坚定地告诉Ta。", timing:"土星相关时期适合建立长期规则和边界" },
+  { name:"教皇", num:"V", icon:"🙏", element:"金牛座", up:"你们需要一个共同的价值观基础。不是要求对方变得和你一样，而是找到你们都认同的「关系公约」。教皇提醒你：有些东西比激情更重要——比如尊重、诚实、和对彼此成长的承诺。如果你们在最根本的事情上是一致的，细节上的分歧都可以商量。", rev:"不要被传统观念或外界压力绑架你的感情选择。「你该结婚了」「Ta条件很好你就从了吧」「别太挑了」——这些声音不是你的。你的感情不需要符合别人的标准，只需要让你和Ta都觉得对。别人的意见可以听，但方向盘在你手里。", love:"两个人可以信仰不同的东西，但必须信仰同一段关系。", energy:"传统、信念、精神指引、价值观审视", action:"和Ta聊一次你们各自对未来的核心期待——不是「想去哪旅游」，是「想过什么样的人生」。", timing:"木星入金牛座时适合审视感情的长期根基" },
+  { name:"恋人", num:"VI", icon:"💕", element:"双子座", up:"这是一个重要的选择时刻。跟随你的心，但也要用头脑。真正的爱情不需要你放弃自我，而是让你成为更好的自己。恋人牌不只是关于浪漫——它是关于「选择」。你选择了Ta，同时也选择了一种生活方式、一组价值观、一个共同的未来。确保你选的是整个人，不只是那些让你心动的碎片。", rev:"你们之间存在价值观的根本分歧，不要因为害怕孤独而将就。将就不是妥协，是慢性自杀。你明明知道有些问题不会因为时间而消失，它们只会像滚雪球一样越滚越大。现在的「算了」会变成将来的「后悔」。", love:"选择一个人就是选择一种生活方式。确保你爱的是真实的Ta，不是你想象中的Ta。", energy:"抉择、融合、深层连接、灵魂拷问", action:"问自己一个残忍的问题：如果Ta永远不会改变，你还愿意和Ta在一起吗？", timing:"金星与木星合相时适合做重大感情决定" },
+  { name:"战车", num:"VII", icon:"⚔️", element:"巨蟹座", up:"只要你们方向一致，没有什么能阻挡这段感情前进。胜利在望。你已经度过了最难的部分——那些争吵、冷战、差点放弃的夜晚——现在需要的不是更多的力气，而是坚持的信念。战车已经在路上了，别在终点前转弯。", rev:"你们在往不同的方向努力，内耗正在消耗这段关系的能量。两匹马如果不朝同一个方向跑，车只会被撕裂。你们不是在一起前进，你们是在一起拉扯。如果你发现自己越努力越累，不是因为你不够好，是因为你们的目的地根本不同。", love:"爱情需要共同的方向，不只是共同的回忆。同频才能走远。", energy:"前进、征服、意志力、决心", action:"和Ta认真聊一次你们各自想要的未来——如果答案不一样，也请勇敢面对。", timing:"火星入相位时行动力最强，适合解决悬而未决的问题" },
+  { name:"力量", num:"VIII", icon:"🦁", element:"狮子座", up:"用温柔而非强硬来面对关系中的挑战。真正的力量不是谁声音大谁赢，不是冷战看谁先低头，不是用离开来威胁对方就范。真正的力量是在暴风雨中保持冷静，是在愤怒时选择理解，是在受伤时依然选择敞开心扉。驯服内心的野兽不靠铁链，靠的是理解和爱。", rev:"你在压抑自己的真实感受。不表达不代表没有需求。愤怒和悲伤不会因为你假装看不见就消失，它们只会换一种方式爆发——莫名其妙的脾气、被动攻击的冷嘲热讽、或者某天突然的情绪崩溃。你不是「好脾气」，你是在忍，忍到最后要么爆炸要么冷掉。", love:"脆弱不是软弱，敢于示弱才是真正的勇敢。铠甲保护你，但也隔绝了爱。", energy:"内在力量、耐心、温柔的坚定、情绪掌控", action:"允许自己在Ta面前展示一次真实的脆弱——不是抱怨，不是指责，就是真实地说「我受伤了」。", timing:"狮子座季节时内在力量觉醒，适合面对长期回避的情感议题" },
+  { name:"隐者", num:"IX", icon:"🏔", element:"处女座", up:"给自己一些独处的时间来想清楚。答案在你内心，不在Ta的回复里，不在闺蜜的分析里，不在网上的帖子里。你不需要别人的验证来确认自己的感受。隐者不是逃避世界，是暂时退后一步，看清全局。有时候最快的前进方式是先停下来。", rev:"你把独处变成了逃避。孤独不是解决关系问题的方式。你是在「寻找自己」还是在「躲避亲密」？如果你发现自己越来越喜欢一个人待着，不是因为独处让你充电，而是因为和Ta在一起让你消耗，那问题不在独处，在关系本身。", love:"最好的恋爱状态是：我可以没有你，但我选择和你在一起。不是依赖，是选择。", energy:"内省、智慧、独立、寻找真相", action:"关掉手机一个小时，和自己好好待一会。问自己：如果没有任何外界声音，你的心到底想说什么？", timing:"水星逆行期间适合深度反思，不适合做重大决定" },
+  { name:"命运之轮", num:"X", icon:"🎡", element:"木星", up:"变化即将到来。这段关系正在进入一个新的周期——可能是升温，可能是转折，可能是你从未预料到的发展。保持开放的心态。命运的齿轮已经开始转动，你只需要做好准备，迎接即将到来的改变。不管转到哪里，相信这都是你需要经历的。", rev:"你在抗拒必然的变化。有些事情不是你能控制的，学会放手。紧握沙子只会让它流失得更快。你不能让时间倒流，不能让一个人强行留在不想留的地方，不能用旧的方式应对新的局面。唯一的出路是接受：变化本身不是敌人，抗拒变化才是。", love:"没有一段感情是永远不变的，但变化不等于消亡。有时候变化是为了让你们以更好的方式在一起。", energy:"转折、机遇、不可预测、命运的推动", action:"列出这段关系中你无法控制的三件事，然后在心里对每一件说「我选择放下」。", timing:"木星换座时大转折来临，生活中的重大变化即将发生" },
+  { name:"正义", num:"XI", icon:"⚖️", element:"天秤座", up:"因果分明。你在这段关系中付出的真心，会以某种形式回到你身边。但正义牌也提醒你：准备好面对真相——正义不总是你想要的答案。有时候公平意味着承认你们都有错，有时候意味着承认这段关系走到了尽头。正义不带感情，它只呈现事实。", rev:"这段关系中存在不公平，而且你知道。是时候认真审视你们之间的付出与回报了。爱情不是交易，但也不应该是单方面的牺牲。如果你总是那个道歉的人、妥协的人、改变的人——问问自己：这是爱还是委曲求全？天平已经严重倾斜了。", love:"公平不是五五分，是双方都觉得值。如果只有你觉得累，那就不公平。", energy:"平衡、真相、因果、客观审视", action:"诚实地评估：在这段关系里你快乐的时间多还是痛苦的时间多？用数字说话。", timing:"天秤座季节适合做感情决策，理性与感性的平衡点" },
+  { name:"倒吊人", num:"XII", icon:"🙃", element:"海王星", up:"有时候你需要换一个角度看这段关系。倒吊人不是受难，是换视角。你一直觉得Ta不够爱你——但如果Ta只是用你不理解的方式在爱呢？你一直觉得自己是受害者——但如果你也是加害者呢？换一个角度，整个故事可能完全不同。暂停、等待、放下执念，让事情自然展开。", rev:"你在这段关系中牺牲太多了，而且这种牺牲不是出于爱，是出于恐惧——怕失去、怕冲突、怕孤独。殉道者情结不会让Ta更爱你，只会让你更疲惫。你值得一段不需要你委屈自己的关系。停止自我感动式的付出，问问对方到底需不需要。", love:"有时候放手不是放弃，是给彼此空间去呼吸、去想念、去确认。", energy:"放下、换视角、等待、臣服", action:"试着站在Ta的角度写一封信给自己——你可能会发现很多你没想到的东西。", timing:"海王星活跃时适合沉淀和内省，不适合做决定" },
+  { name:"死神", num:"XIII", icon:"💀", element:"天蝎座", up:"一个阶段正在结束——但这不是坏事。死神牌不是真的死亡，是蜕变。旧的关系模式必须死去，新的才能诞生。也许你们的蜜月期结束了，也许你对Ta的幻想破灭了，也许你们需要重新定义这段关系。这些「结束」都是伪装的开始。蝴蝶破茧之前，毛毛虫必须先「死」一次。", rev:"你在抗拒必要的结束。你紧紧抓住一段已经变质的关系，不是因为爱，是因为害怕失去。但你抓住的不是Ta，是你对「有人爱我」这件事的执念。有些关系就像牛奶——过期了就是过期了，你再怎么放冰箱也变不回新鲜的。放手不是认输，是给自己一个重新开始的机会。", love:"真正的爱情经得起死亡般的蜕变。如果经不起，那它本来就不够真。", energy:"结束、蜕变、重生、无常", action:"列出这段关系中你已经「死去」的幻想——那些曾经以为会永远的东西。接受它们的离去。", timing:"天蝎座季节是感情蜕变的高峰期" },
+  { name:"节制", num:"XIV", icon:"🏺", element:"射手座", up:"平衡和融合是当前最需要的。你们需要找到一个双方都舒服的节奏——不是你追我跑的拉扯，不是忽冷忽热的折磨，而是温水般恰到好处的温度。节制是两杯水倒在一起慢慢融合，不是一方倒空自己去填满另一方。耐心等待，好的关系需要时间来调和。", rev:"你们之间的关系失衡了。一方太热一方太冷，一方在追一方在退。这种不对等如果持续下去，热的那一方会烧尽，冷的那一方会冻僵。现在需要的不是更多的热情或更多的冷静，是两个人坐下来，诚实地谈谈彼此的温度。", love:"最好的关系不是烈火烹油，是文火慢炖。不急，但始终在。", energy:"平衡、耐心、调和、中庸之道", action:"回顾你们最近的互动——谁在付出更多？谁在回避更多？找到失衡点。", timing:"射手座季节适合寻找关系中的新平衡" },
+  { name:"恶魔", num:"XV", icon:"😈", element:"摩羯座", up:"审视你们关系中不健康的依赖和执念。恶魔不是外在的妖魔鬼怪，是你内心的瘾——对Ta的瘾、对被爱的瘾、对痛苦的瘾。有些关系让你痛但你离不开，不是因为爱，是因为上瘾。分清楚：你是真的爱Ta，还是害怕没有Ta？这两者的区别，就是自由和囚笼的区别。", rev:"好消息：束缚你的锁链其实从来没有真正锁上。恶魔牌逆位意味着你正在觉醒，开始意识到那些不健康的模式。你开始看清楚了——那些你以为是爱的东西，有些其实是恐惧、控制、或者习惯。觉醒是解脱的第一步。你已经看到了出口，现在需要的是走过去的勇气。", love:"真正的爱让你自由，让你成为更好的人。如果一段感情让你变得更小、更弱、更不像自己，那不是爱。", energy:"执念、依赖、阴影、但也是觉醒的契机", action:"列出这段关系中让你「上瘾」的东西——是Ta本身，还是Ta给你的某种感觉？分清楚。", timing:"摩羯座季节适合审视关系中的权力动态" },
+  { name:"塔", num:"XVI", icon:"🗼", element:"火星", up:"突然的变化即将到来——可能是一次争吵、一个真相的揭露、或者一个意外的转折。塔不是惩罚，是解放。那些建立在虚假基础上的东西必须被推倒，真实的才能在废墟上重建。是的，这个过程会很痛苦。但有些真相，晚知道不如早知道。脓包不挑破只会更烂。", rev:"你在逃避即将到来的震荡。你已经感觉到了——那些裂缝、那些不对劲的细节、那些你选择性忽略的信号。你以为只要不去看就不存在。但塔倒不倒不取决于你看不看，它取决于地基稳不稳。与其等它自己倒（那样更痛），不如主动面对。", love:"有些关系需要被打碎才能重建得更好。如果你们的关系经不起一次真相的冲击，那它本来就不值得维护。", energy:"突变、崩塌、真相揭露、但也是净化", action:"有没有一个你一直不敢问的问题？今天问出来。不管答案是什么，你都承受得住。", timing:"火星强势时容易引发冲突，但冲突有时是清理的必要手段" },
+  { name:"星星", num:"XVII", icon:"⭐", element:"水瓶座", up:"希望就在前方。经历了风雨之后，这段关系正在走向治愈和重建。伤口在愈合，虽然会留下疤痕，但疤痕是你勇敢过的证据。星星的光虽然微弱，但足以在最黑的夜里指引方向。你已经走过了最难的部分——塔已经倒了，灰烬已经冷了，现在是重建的时候。", rev:"你对这段感情的期待不切实际。你在幻想一个完美的版本——完美的Ta、完美的关系、完美的未来。但完美不存在。美好的爱情需要建立在真实的基础上，而不是你幻想中的完美剧本。放下滤镜，看看真实的Ta和真实的关系——如果真实的版本你也能接受，那才是真的爱。", love:"治愈不是忘记，是带着伤痕继续相信爱。每一道疤都是你爱过的证据。", energy:"希望、治愈、灵感、脆弱中的力量", action:"给自己写一封信，感谢自己在这段感情中的坚持和勇气——你比你以为的要强大得多。", timing:"水瓶座新月时种下希望的种子，适合许愿和重新出发" },
+  { name:"月亮", num:"XVIII", icon:"🌑", element:"双鱼座", up:"不是所有的不确定都是坏事。在迷雾中保持耐心，真相即将浮现。月光虽然微弱，但足以照亮前方的路——前提是你愿意慢慢走，而不是慌张地乱跑。现在你看不清全貌，这很正常。有些事情需要时间才能显现它的全部面貌。不急，答案正在路上。", rev:"你在自欺欺人。Ta给你的不安全感不是你想多了，是真实存在的。你的恐惧不是空穴来风——但也不要让恐惧替你做决定。月亮逆位提醒你：你需要分清楚哪些是真实的危险信号，哪些是你自己的投射和创伤反应。不是所有的不安都是直觉，有些只是旧伤口在作痛。", love:"真正的安全感来自内心，不是来自Ta的保证。一万句「我爱你」抵不过一颗安定的心。", energy:"幻觉、恐惧、潜意识、迷雾中的清醒", action:"把你最深的恐惧写下来，然后对每一个问自己：这是「事实」还是「我害怕的故事」？", timing:"月食前后真相浮出水面，双鱼座季节情绪特别敏感" },
+  { name:"太阳", num:"XIX", icon:"☀️", element:"太阳", up:"快乐和温暖正在涌入你们的关系。享受当下，这是最好的时光。阳光下没有秘密，也没有恐惧——这就是爱情最好的样子。你们之间的关系正在进入一个阳光灿烂的阶段：坦诚、快乐、充满生命力。不要因为「太顺利了」就开始焦虑——你值得这份幸福，不需要等另一只靴子掉下来。", rev:"你们之间的快乐可能只是表面的。看看阳光照不到的角落里藏着什么——那些你们默契地不提起的话题、那些笑声背后的沉默、那些「挺好的」背后的言不由衷。虚假的快乐比真实的痛苦更危险，因为它让你在不知不觉中浪费时间。真正的快乐不需要你说服自己「我们很好」。", love:"真正的幸福不怕被审视。如果你们的快乐经不起认真一看，那它可能只是表演。", energy:"光明、喜悦、真实、生命力、赤子之心", action:"和Ta分享一件你从未告诉任何人的事——真正的亲密是在阳光下展示你最真实的自己。", timing:"太阳回归日（生日前后）能量最强，适合庆祝和表达爱" },
+  { name:"审判", num:"XX", icon:"📯", element:"冥王星", up:"一个重要的清算和觉醒时刻到了。审判不是定罪，是回顾——回顾这段感情走过的路，看清楚什么是真的、什么是幻觉、什么是你一直在逃避的。现在是时候对自己诚实了。你在这段关系中扮演的角色是什么？你有没有做过对不起Ta的事？Ta有没有做过你至今无法原谅的事？一切都摊开来看，然后做出你的最终选择。", rev:"你在自我审判，而且判得太重了。你一直在为过去的选择自责——「如果当初我不那样说」「如果我早一点表白」「如果我没有那么冲动」。但过去已经过去了，你不能改写历史。审判逆位提醒你：原谅自己，就像你会原谅你爱的人一样。你不完美，但你尽力了。", love:"真正的成长不是变得完美，是学会和不完美的自己、不完美的Ta、不完美的关系共处。", energy:"觉醒、清算、重生、最终选择", action:"写一封不会寄出的信，把这段感情中所有的感谢和遗憾都写出来。然后烧掉或撕掉——这是你的仪式。", timing:"冥王星活跃时适合做感情的最终清算和决定" },
+  { name:"世界", num:"XXI", icon:"🌍", element:"土星", up:"一个阶段的圆满完成。你们的关系已经成熟到了一个新的层次——不是热恋时的盲目，不是磨合期的痛苦，而是真正理解彼此之后的平静和踏实。你不需要再证明什么，你已经足够好了。世界牌告诉你：你走完了一整个循环。不管接下来是继续一起走，还是各自上路，这段旅程都是圆满的。", rev:"你在一段已经结束的关系里原地打转。是时候翻篇了。完结不是失败，是为下一个更好的开始腾出空间。你之所以走不出来，不是因为Ta多好，是因为你还没有和「那段时光里的自己」告别。世界逆位提醒你：你留恋的不是Ta，是那时候的你自己。但你已经不是那个人了——你长大了，你配得上更好的。", love:"有些人是来教会你爱的，不是来陪你一辈子的。感谢Ta，然后前进。", energy:"完成、整合、圆满、新循环的起点", action:"如果这段关系明天就结束，你最想说的一句话是什么？说出来——不管是对Ta还是对自己。", timing:"土星回归时关系经历大考验，也是最重要的成长契机" },
+];
+
+var SYNTH = [
+  "过去的经历正在深刻影响你现在的选择。你以为你已经放下了，但牌面显示那些旧伤口还在暗中指引你的行为模式。你现在对Ta的某些反应——那些不合理的恐惧、过度的期待、莫名的不安——很可能不是Ta造成的，而是过去某段关系留下的残影。好消息是，觉察就是治愈的第一步。",
+  "三张牌之间存在明显的能量递进。你正在从一个旧的关系模式中觉醒，但蜕变的过程不会舒适。就像蛇蜕皮一样，你正在剥离那些不再适合你的旧习惯和旧信念。这个过程可能伴随着痛苦和迷茫，但请相信——新的皮肤已经在旧皮肤下面长好了。",
+  "过去和未来的牌形成了强烈对照。你内心最深处知道自己想要什么，但恐惧让你不断重复旧的模式。这就像你站在一扇门前，明明知道门后面是你想要的，但你的手就是不敢推。牌面在告诉你：推开它。最坏的结果不过是回到原点，但最好的结果可能是你从未想象过的。",
+  "现在这张牌是关键转折点。你正站在十字路口，接下来两到三周内的选择将决定未来三个月的走向。不是让你草率决定，而是让你注意——生活正在向你抛出一个信号，别错过它。有时候宇宙给你的窗口期很短，犹豫太久窗口就关上了。",
+  "这组牌暗示着一个循环即将被打破。你在这段关系中学到的功课已经接近完成。不管最终的结局是在一起还是分开，你都将以一个不同的、更完整的人的身份走出来。这段经历不是白费的——你正在毕业。",
+  "三张牌的能量都指向内在——这不是关于Ta怎么做的问题，而是关于你如何面对自己的问题。你一直在等Ta改变、等Ta给你答案、等Ta先迈出那一步。但牌面说得很清楚：你等的那个人其实是你自己。当你不再把自己的幸福绑定在Ta的行为上，一切都会开始松动。",
+  "牌面显示外在的变化即将到来，但真正的转变需要从你的内心开始。宇宙已经准备好了，但你还在犹豫。你害怕的不是失去Ta，而是失去那个「有Ta的自己」。问问自己：如果明天Ta不在了，你还认识镜子里那个人吗？如果答案是犹豫的，那你知道该先做什么了。",
+  "过去的伤痛和未来的希望在现在交汇。这一刻你做的每一个选择，都在重新书写结局。你不需要做什么惊天动地的大事——有时候一句真诚的话、一个拥抱、或者一个勇敢的决定，就足以改变整个轨迹。牌面提醒你：别低估小选择的力量。",
+];
+
+function drawCards() {
+  var shuffled = [...TAROT].sort(function() { return Math.random() - 0.5; });
+  return [0, 1, 2].map(function(i) {
+    return { ...shuffled[i], reversed: Math.random() > 0.6, pos: ["过去", "现在", "未来"][i], posDesc: ["影响你现在的根源", "你当前的状态与能量", "即将到来的趋势"][i] };
+  });
+}
+
+function getSynthesis() { return SYNTH[Math.floor(Math.random() * SYNTH.length)]; }
+
+/* ═══ PROMPTS ═══ */
+const P = {
+  diagnose: `你是「已读」依恋类型分析器。分别分析双方的依恋类型。风格犀利直接不鸡汤。
+
+注意：如果用户提供的是聊天截图，右侧的消息气泡是用户自己发的，左侧的消息气泡是对方发的。请据此区分双方。
+
+重要：思考完成后，只输出一个JSON对象作为最终回复。JSON以{开头以}结尾，JSON外不要有其他文字。
+
+JSON格式：{"user_type":"anxious或avoidant或secure或disorganized","user_label":"中文类型名","partner_type":"同上","partner_label":"中文类型名","confidence":数字,"match":"互动模式2-3句","signals":[{"msg":"原话","who":"对方或用户","meaning":"潜台词","icon":"emoji"},{"msg":"","who":"","meaning":"","icon":""},{"msg":"","who":"","meaning":"","icon":""}],"user_advice":"给用户的建议","partner_advice":"应对Ta的策略"}`,
+  translate: `你是「已读」翻译器。翻译Ta说的话背后真实意思。风格犀利毒舌。
+
+重要：思考完成后，只输出一个JSON对象作为最终回复。JSON以{开头以}结尾，JSON外不要有其他文字。
+
+JSON格式：{"translations":[{"original":"原话","verdict":"一句话判断","possibilities":[{"label":"A","percent":数字,"meaning":"含义","reason":"原因"},{"label":"B","percent":数字,"meaning":"含义","reason":"原因"},{"label":"C","percent":数字,"meaning":"含义","reason":"原因"}],"most_likely":"A或B或C","why":"原因"}]}`,
+  check: `你是「已读」消息检测器。根据对方依恋类型分析消息该不该发。风格犀利直接。
+
+重要：思考完成后，只输出一个JSON对象作为最终回复。JSON以{开头以}结尾，JSON外不要有其他文字。
+
+JSON格式：{"verdict":"别发或可以发","danger":true或false,"trigger":"触发什么","prediction":"对方反应","alternative":"替代消息","reason":"原因","type_note":"针对类型分析"}`,
+  predict: `你是「已读」感情预测器。根据聊天记录预测走向。风格犀利有建设性。
+
+重要：思考完成后，只输出一个JSON对象作为最终回复。JSON以{开头以}结尾，JSON外不要有其他文字。
+
+JSON格式：{"stage":"当前阶段","stage_desc":"描述","predictions":[{"time":"1周后","scene":"预测","prob":数字,"emoji":"emoji"},{"time":"1个月后","scene":"预测","prob":数字,"emoji":"emoji"},{"time":"3个月后","scene":"预测","prob":数字,"emoji":"emoji"}],"turning":"转折点","best":"最好","worst":"最差","todo":"该做的一件事"}`,
+};
+
+async function callAI(sys, message, images) {
+  var maxRetries = 2;
+  for (var attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      var body = { system: sys, message: message };
+      if (images && images.length > 0) body.images = images;
+      var r = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || "API error");
+      var raw = d.text || "";
+      if (!raw) throw new Error("AI没有返回内容");
+      raw = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      if (raw.indexOf("<think>") !== -1) raw = raw.substring(0, raw.indexOf("<think>")).trim();
+      raw = raw.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+      try { return JSON.parse(raw); } catch(e) {}
+      var first = raw.indexOf("{"); var last = raw.lastIndexOf("}");
+      if (first !== -1 && last > first) { try { return JSON.parse(raw.substring(first, last + 1)); } catch(e) {} }
+      var firstA = raw.indexOf("["); var lastA = raw.lastIndexOf("]");
+      if (firstA !== -1 && lastA > firstA) { try { return JSON.parse(raw.substring(firstA, lastA + 1)); } catch(e) {} }
+      if (first !== -1 && last > first) {
+        var attempt2 = raw.substring(first, last + 1).replace(/[\x00-\x1f]/g, function(c) {
+          if (c === '\n') return '\\n'; if (c === '\r') return '\\r'; if (c === '\t') return '\\t'; return '';
+        });
+        try { return JSON.parse(attempt2); } catch(e) {}
+      }
+      if (first === -1 && raw.length > 10) return { text: raw, fallback: true };
+      if (attempt < maxRetries) continue; // retry
+      throw new Error("AI" + String.fromCharCode(22238,22797,26684,24335,24322,24120));
+    } catch(err) {
+      if (attempt >= maxRetries) throw err;
+      // wait 1 second before retry
+      await new Promise(function(res){setTimeout(res,1000)});
+    }
+  }
+}
+
+function calcQuiz(ans) {
+  var s = { anxious:0, avoidant:0, secure:0, disorganized:0 };
+  ans.forEach(function(a){s[TMAP[a]]++});
+  var mx="secure",mv=0; Object.keys(s).forEach(function(k){if(s[k]>mv){mv=s[k];mx=k}});
+  return { type: mx, scores: s };
+}
+
+/* ═══ COMPONENTS ═══ */
+function Dots() { return <span style={{display:"inline-flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:7,height:7,borderRadius:"50%",background:`linear-gradient(135deg,${C.wine},${C.plum})`,display:"inline-block",animation:`bounce .9s ease ${i*.15}s infinite`}}/>)}</span>; }
+
+function TCard({type,label,small}) {
+  var t=TI[type]||TI.secure;
+  return <div style={{background:t.grad,borderRadius:small?20:28,padding:small?"24px 18px 20px":"48px 28px 40px",color:C.ink,textAlign:"center",position:"relative",overflow:"hidden",flex:small?1:undefined}}>
+    <div style={{position:"absolute",top:-60,right:-60,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.6)"}}/>
+    <div style={{position:"absolute",bottom:-40,left:-40,width:150,height:150,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+    <div style={{fontSize:small?40:72,marginBottom:small?8:16,position:"relative",animation:"float 3s ease infinite"}}>{t.emoji}</div>
+    {!small&&<div className="serif" style={{fontSize:12,letterSpacing:6,opacity:.6,marginBottom:12,fontWeight:400,position:"relative",fontStyle:"italic"}}>your attachment style</div>}
+    <div className="serif" style={{fontSize:small?22:44,fontWeight:900,marginBottom:small?4:10,position:"relative"}}>{label||t.label}</div>
+    <div className="sans" style={{fontSize:small?12:16,opacity:.8,position:"relative",fontWeight:400}}>{t.desc}</div>
+  </div>;
+}
+
+function EntryCard({icon,bg,title,sub,onClick}) {
+  return <button onClick={onClick} style={{width:"100%",background:C.card,borderRadius:20,padding:"24px 22px",boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line,cursor:"pointer",textAlign:"left",display:"flex",gap:18,alignItems:"center",marginBottom:14,transition:"transform .15s,box-shadow .15s"}}
+    onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 30px rgba(45,42,50,.08)"}}
+    onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 16px rgba(45,42,50,.04)"}}>
+    <div style={{width:56,height:56,borderRadius:16,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{icon}</div>
+    <div style={{flex:1}}><div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:4}}>{title}</div><div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{sub}</div></div>
+    <div style={{fontSize:20,color:C.muted,fontWeight:300}}>›</div>
+  </button>;
+}
+
+var sec = {marginTop:16,padding:"24px",background:"rgba(255,255,255,.45)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderRadius:20,boxShadow:"0 8px 32px rgba(31,38,135,.06),inset 0 1px 0 rgba(255,255,255,.8)",border:"1px solid rgba(255,255,255,.6)"};
+
+/* ═══ LOVE ORACLE (月老灵签) ═══ */
+var QIAN = [
+  {rank:"上上",poem:"月老红线早已牵，只等佳期在眼前。莫问前程多少路，回头便是有缘人。",read:"你等的人也在等你，但你们都在等对方先开口——所以赶紧开口。",guide:"主动出击，这次老天站你这边。",yi:"表白、约会、发那条编辑了三遍的消息",ji:"犹豫、已读不回、假装不在乎"},
+  {rank:"上上",poem:"鸳鸯戏水不知寒，并蒂莲开两心欢。若问姻缘何处觅，低头便见月中人。",read:"缘分就在身边，你只是一直在远处找。可能是你忽略的那个人，一直在等你转身。",guide:"看看身边，答案比你想的近。",yi:"留意身边人、接受邀约、认真回忆谁对你最好",ji:"好高骛远、网恋、在社交媒体上找真爱"},
+  {rank:"上",poem:"春风得意正当时，桃花一枝入梦来。且将心事付流水，自有佳人伴月归。",read:"桃花运正旺，但别得意忘形。来的人多不代表对的人多，擦亮眼睛。",guide:"享受被喜欢的感觉，但别急着做选择。",yi:"社交、认识新朋友、打扮自己",ji:"脚踏两只船、暧昧成瘾、撩完就跑"},
+  {rank:"上",poem:"久旱逢甘雨，他乡遇故知。洞房花烛夜，金榜题名时。",read:"等了很久的好消息要来了。可能是Ta的态度软化，可能是一个意外的重逢。",guide:"保持耐心，好事将近。",yi:"等待、保持现状、相信时间",ji:"催促、逼问、给最后通牒"},
+  {rank:"上",poem:"云开月出照人间，守得花开满庭芳。回首来路虽坎坷，前方尽是好风光。",read:"之前受的苦不是白受的，它们都在为现在铺路。你快要走出低谷了。",guide:"坚持住，转机就在下一个路口。",yi:"坚持、自我疗愈、给自己时间",ji:"自暴自弃、报复性恋爱、借酒消愁"},
+  {rank:"中上",poem:"花开半夏正芬芳，缘来缘去莫彷徨。今日且将心事了，明朝又是好时光。",read:"感情状态还不错，但还没到最好的时候。别着急定义关系，让它自然发展。",guide:"享受暧昧期，这是最美的阶段。",yi:"慢慢来、保持神秘感、做自己",ji:"追问关系定义、查岗、翻旧账"},
+  {rank:"中上",poem:"两情若是长久时，又岂在朝朝暮暮。且看风轻云淡处，自有真心一片来。",read:"异地或聚少离多不是问题，心在就行。但如果心不在了，天天在一起也没用。",guide:"关注质量不是频率。",yi:"深度对话、分享内心、信任对方",ji:"查岗、夺命连环call、计较回复速度"},
+  {rank:"中",poem:"半喜半忧在心头，且行且看且珍重。莫道前路多迷雾，柳暗花明又一村。",read:"现在的局面不好不坏，关键看你接下来怎么走。有机会但也有风险。",guide:"谨慎乐观，走一步看一步。",yi:"观察、思考、保持冷静",ji:"冲动表白、吵架、做重大决定"},
+  {rank:"中",poem:"镜中花水中月，看似有情却无缘。莫被表象迷了眼，静待真心自然来。",read:"你喜欢的可能不是真实的Ta，而是你想象中的Ta。摘下滤镜看看真实的样子。",guide:"分清现实和幻想。",yi:"理性分析、听朋友的意见、面对真相",ji:"自我感动、过度美化对方、忽略红旗"},
+  {rank:"中",poem:"行船莫怕逆风来，心正何愁路不开。今日虽有小波折，大船终将到彼岸。",read:"会有一些小摩擦和误会，但不是致命的。处理好了反而会让你们更近一步。",guide:"把冲突当成了解彼此的机会。",yi:"坦诚沟通、承认错误、换位思考",ji:"冷战、翻旧账、扯别人下水"},
+  {rank:"中下",poem:"落花有意随流水，流水无心恋落花。莫叹相思空一场，缘尽之时各天涯。",read:"你的心意对方可能没有接收到，或者接收到了但选择忽略。有时候不是你不好，是你们不合适。",guide:"接受现实，及时止损。",yi:"放手、专注自己、接受不完美",ji:"死缠烂打、卑微讨好、失去自我"},
+  {rank:"中下",poem:"雾里看花终隔一层，水中捞月到头空。劝君莫在迷途走，回头才见真光明。",read:"你在一段不太健康的关系里越陷越深。不是你不够好，是这个环境不适合你生长。",guide:"该撤退就撤退，这不是认输。",yi:"冷静评估、找人倾诉、给自己设底线",ji:"继续投入沉没成本、委屈求全、自我欺骗"},
+  {rank:"下",poem:"乌云蔽日暂无光，独坐愁城泪两行。莫道人间无好景，风停雨住见太阳。",read:"现在确实很难，但不会永远这样。这个阶段会过去的，你需要的是撑过去。",guide:"照顾好自己，这是最重要的事。",yi:"自我关爱、找专业帮助、允许自己难过",ji:"做任何重大感情决定、自我伤害、孤立自己"},
+  {rank:"下",poem:"枯木逢春尚有时，人生何必太心急。今日虽是低谷路，来年花开满园时。",read:"现在不是谈恋爱的好时机。先把自己照顾好，把生活理顺，爱情自然会来。",guide:"先爱自己，再爱别人。",yi:"独处、学习、健身、搞钱",ji:"为了不孤独而将就、回头找前任、在感情里找价值感"},
+  {rank:"上上",poem:"天作之合非偶然，千里姻缘一线牵。今日得此上上签，良缘美眷在今年。",read:"极品好签。你的感情运势正处于巅峰，不管是单身还是有伴，都有大好事要发生。",guide:"大胆行动，宇宙都在帮你。",yi:"一切关于爱情的事",ji:"唯一忌讳是不行动"},
+  {rank:"上",poem:"雨后初晴彩虹现，柳暗花明在眼前。有情人终成眷属，只需耐心等几天。",read:"好事多磨，但磨完了就是好事。你的等待不是白等，结果会让你惊喜。",guide:"再等等，好消息在路上了。",yi:"保持信心、维持现状",ji:"放弃、换目标、急躁"},
+  {rank:"中上",poem:"月缺月圆自有时，花落花开春又来。眼前虽有小别离，相逢更在明月夜。",read:"暂时的分开不代表结束。如果是对的人，兜兜转转还会回来。",guide:"给空间，但不要断联。",yi:"保持联系、给对方空间、做自己的事",ji:"纠缠、监视、找Ta朋友打听"},
+  {rank:"中",poem:"棋逢对手将遇良才，你来我往见真章。莫将试探当游戏，真心才是通关牌。",read:"你们之间有一种微妙的博弈。都在试探，都在衡量，但谁都不愿意先亮底牌。",guide:"总要有人先真诚。",yi:"坦诚、放下防备、说真话",ji:"继续试探、玩欲擒故纵、嘴硬心软"},
+  {rank:"中下",poem:"前路茫茫雾重重，独行莫怨路不通。休将错爱当真爱，放下执念见清风。",read:"你执着的那个人可能不是你的答案。执念和爱情的区别是：爱情让你变好，执念让你变小。",guide:"问问自己：我是在爱Ta还是在执着？",yi:"自省、断舍离、写日记",ji:"继续追一个不可能的人"},
+  {rank:"下下",poem:"镜花水月梦一场，醒来方知泪两行。劝君及早抽身去，莫待伤深悔断肠。",read:"当头棒喝签。你现在的感情状态需要你清醒一下——你知道有问题，所有人都知道有问题，就差你承认了。",guide:"承认现实，这是解脱的第一步。",yi:"承认事实、做艰难但正确的决定",ji:"自欺欺人、继续忍耐、等Ta改变"},
+];
+
+/* ═══ BAZI (八字速配) ═══ */
+var TIAN=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+var DI=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+var WUXING_T=["木","木","火","火","土","土","金","金","水","水"];
+var WUXING_D=["水","土","木","木","土","火","火","土","金","金","土","水"];
+var SHENGXIAO=["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+var BAZI_MATCH=[
+  {type:"天作之合",desc:"你们的八字五行互补得恰到好处，日柱相合，简直是教科书级别的般配。这种缘分在命理学上被称为「天赐良缘」，不是你们自己找到了对方，是命运把你们推到了一起。在一起不需要太多磨合，自然而然就能找到舒服的节奏。你说东Ta不会偏要说西，你难过的时候Ta不需要你解释就知道该怎么安慰你。这不是巧合，是你们的能量场天生就在同一个频率上。珍惜这段缘分吧——这种般配程度，很多人一辈子都遇不到。",score:95},
+  {type:"良缘佳偶",desc:"八字整体和谐，五行之间有良好的互补关系。虽然有一两处小摩擦的地方，但都在可控范围内，不影响大局。你们的关系底色是温暖的，偶尔的争执反而是调味料——就像菜里的盐，没有会淡，有了才有味道。你们的日柱关系显示出一种「互相成就」的模式：Ta的优点恰好能补你的短板，你的长处也能撑起Ta的弱项。建议你们在遇到分歧时，多想想对方的出发点——你们的矛盾大多不是原则性的，而是方式方法上的差异。方向是一致的，只是走法不同而已。",score:85},
+  {type:"欢喜冤家",desc:"你们的八字有互相吸引的地方，也有互相较劲的地方。像磁铁的两极——靠近时吸力强大，但翻个面就互相排斥。在一起不会无聊，这是确定的。但也不会太安稳——总会有那么一些时刻让你们想掐死对方。从五行看，你们有「相生」也有「相克」的关系，这意味着你们既能激发彼此最好的一面，也能激怒彼此最暴躁的一面。这种关系像过山车，刺激但不是所有人都受得了。如果你们都享受这种张力，那其实蛮有趣的；如果其中一方更需要稳定感，那就需要认真谈谈你们的底线和边界了。",score:70},
+  {type:"磨合考验",desc:"五行上有一些冲突，属于需要「修炼」的缘分。不是天生就合拍，但也不是完全不搭——更像是两块形状不太一样的拼图，需要找到正确的角度才能拼在一起。你们的日柱关系显示出一种「推拉」的动态：一方向前一步，另一方就退后一步。这种模式如果不自觉地打破，会形成一个让双方都很累的循环。好消息是，命理上的冲突不是判死刑——它只是告诉你们需要比一般情侣多付出一些耐心和智慧。具体建议：遇到争执时，先各自冷静30分钟再沟通，不要在情绪最激烈的时候做决定。",score:55},
+  {type:"道阻且长",desc:"八字冲突比较明显，五行上存在较强的克制关系。说实话，在一起不是不可以，但你们需要做好心理准备：这段关系会比大多数人的更辛苦。不是因为你们不够好，是因为你们的能量模式天生就容易「短路」——一个人充电的方式恰好是另一个人放电的方式，互相消耗几乎是默认模式。如果你们决定在一起，需要有意识地创造「各自充电」的空间和时间。不要试图改变对方的本性，那是跟天命作对。学会接受差异、管理冲突，是你们最重要的功课。也可以考虑寻求专业的关系咨询。",score:40},
+  {type:"此生过客",desc:"八字显示你们更适合做朋友、知己，或者人生中一段重要但不是永久的缘分。有些人出现在你生命里不是为了留下，是为了教会你一些事情——可能是教你怎么爱、怎么放手、怎么认识自己。从五行上看，你们的能量场存在根本性的不兼容，长期相处会让双方都越来越偏离自己的最佳状态。这不是谁的错，就像水和油——都是好东西，但硬要混在一起只会互相别扭。如果你们现在还在一起，请认真想想：你是真的快乐，还是只是害怕孤独？答案你心里清楚。该放手的时候放手，不是认输，是给彼此自由。",score:25},
+];
+
+function calcBazi(y,m,d){
+  var t=(y-4)%10;if(t<0)t+=10;
+  var di=(y-4)%12;if(di<0)di+=12;
+  var mBase=((y%5)*2+m+1)%10;
+  var md=(y*12+m+13)%12;
+  var dd=(Math.floor((Date.UTC(y,m-1,d)/86400000)+10)%60);
+  var dt=dd%10;var ddi=dd%12;
+  return{yearT:t,yearD:di,monthT:mBase%10,monthD:md,dayT:dt,dayD:ddi,sx:SHENGXIAO[di]};
+}
+
+function baziCompat(b1,b2){
+  var score=50;
+  var w1=WUXING_T[b1.dayT],w2=WUXING_T[b2.dayT];
+  var sheng={"木":"火","火":"土","土":"金","金":"水","水":"木"};
+  var ke={"木":"土","土":"水","水":"火","火":"金","金":"木"};
+  if(sheng[w1]===w2||sheng[w2]===w1)score+=20;
+  if(ke[w1]===w2||ke[w2]===w1)score-=15;
+  if(w1===w2)score+=10;
+  var he6=[[0,1],[2,11],[3,10],[4,9],[5,8],[6,7]];
+  he6.forEach(function(p){if((b1.dayD===p[0]&&b2.dayD===p[1])||(b1.dayD===p[1]&&b2.dayD===p[0]))score+=15});
+  var chong=[[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]];
+  chong.forEach(function(p){if((b1.yearD===p[0]&&b2.yearD===p[1])||(b1.yearD===p[1]&&b2.yearD===p[0]))score-=10});
+  if(score>90)score=95;if(score<10)score=15;
+  score=Math.max(15,Math.min(95,score));
+  var idx=score>=90?0:score>=75?1:score>=60?2:score>=45?3:score>=30?4:5;
+  return{score:score,info:BAZI_MATCH[idx],w1:w1,w2:w2,sx1:b1.sx,sx2:b2.sx,gz1:TIAN[b1.dayT]+DI[b1.dayD],gz2:TIAN[b2.dayT]+DI[b2.dayD]};
+}
+
+/* ═══ DAILY FORTUNE (今日运势) ═══ */
+var FORTUNE_KW=["暗涌","破冰","回温","试探","拉扯","甜蜜","冷战","和解","心动","犹豫","错过","重逢","告白","放下","执念","自由","疗愈","觉醒"];
+var FORTUNE_YI=["主动表白","约Ta出去","发那条消息","认真聊一次","牵手","说软话","承认错误","送小礼物","回忆甜蜜时刻","夸Ta"];
+var FORTUNE_JI=["翻旧账","冷战","已读不回","说反话","跟前任联系","在朋友圈阴阳怪气","酒后发消息","查Ta手机","提分手试探","跟别人暧昧气Ta"];
+var LUCKY_COLORS=["珊瑚粉——让你看起来更温柔","雾霾蓝——冷静但不冷漠","奶油白——给人安全感","薄荷绿——清新感满分","焦糖色——温暖且治愈","薰衣草紫——神秘又吸引人","蜜桃橙——活力四射甜甜的","烟灰色——高级又有距离感"];
+var FORTUNE_MSG=["今天适合勇敢一点，最坏的结果不过是回到原点","有些话今天不说，明天就更说不出口了","今天的你散发着让人想靠近的气场","注意控制情绪，冲动是魔鬼","今天适合倾听，少说多听反而能收获更多","桃花运不错，出门记得打扮","今天的你需要独处充电，别勉强自己社交","有人在想你，但你可能猜不到是谁","旧的不去新的不来，放下才能拥有","直觉很准，如果感觉不对就是不对"];
+
+function calcFortune(month,day){
+  var today=new Date();var ty=today.getFullYear(),tm=today.getMonth()+1,td=today.getDate();
+  var seed=(ty*10000+tm*100+td)*31+(month*100+day)*17;
+  var s=function(n){return((seed*n+7919)%10007)};
+  var stars=s(1)%5+1;
+  var kw1=FORTUNE_KW[s(2)%FORTUNE_KW.length],kw2=FORTUNE_KW[s(3)%FORTUNE_KW.length];
+  var yi=FORTUNE_YI[s(4)%FORTUNE_YI.length];
+  var ji=FORTUNE_JI[s(5)%FORTUNE_JI.length];
+  var color=LUCKY_COLORS[s(6)%LUCKY_COLORS.length];
+  var msg=FORTUNE_MSG[s(7)%FORTUNE_MSG.length];
+  return{stars:stars,kw:[kw1,kw2],yi:yi,ji:ji,color:color,msg:msg};
+}
+
+/* ═══ MAIN APP ═══ */
+export default function App() {
+  var [pg,setPg]=useState("home");
+  var [qi,setQi]=useState(0),[qa,setQa]=useState([]),[qr,setQr]=useState(null),[pk,setPk]=useState(-1);
+  var [text,setText]=useState(""),[ctx,setCtx]=useState(""),[imgs,setImgs]=useState([]),[imgNames,setImgNames]=useState([]);
+  var [step,setStep]=useState("input"),[res,setRes]=useState(null),[lm,setLm]=useState(""),[err,setErr]=useState(null);
+  var [pType,setPType]=useState("");
+  var [tarotCards,setTarotCards]=useState(null),[tarotRevealed,setTarotRevealed]=useState([false,false,false]),[synthesis,setSynthesis]=useState("");
+  var [tarotPool,setTarotPool]=useState(null),[tarotStep,setTarotStep]=useState("intro"),[tarotPicked,setTarotPicked]=useState([]);
+  var [qianResult,setQianResult]=useState(null),[qianShaking,setQianShaking]=useState(false);
+  var [bDate1,setBDate1]=useState({y:"",m:"",d:""}),[bDate2,setBDate2]=useState({y:"",m:"",d:""}),[baziResult,setBaziResult]=useState(null);
+  var [fMonth,setFMonth]=useState(""),[fDay,setFDay]=useState(""),[fYear,setFYear]=useState(""),[fortuneResult,setFortuneResult]=useState(null);
+  var [calType,setCalType]=useState("solar"); // solar=公历 lunar=农历
+
+  function goHome(){setPg("home");setQi(0);setQa([]);setQr(null);setPk(-1);setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
+  function resetInput(){setText("");setCtx("");setImgs([]);setImgNames([]);setStep("input");setRes(null);setErr(null)}
+  function go(p){resetInput();setPg(p);setQi(0);setQa([]);setQr(null);setPType("");setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis("");setTarotPool(null);setTarotStep("intro");setTarotPicked([]);setQianResult(null);setQianShaking(false);setBaziResult(null);setFortuneResult(null)}
+  function ansQ(i){setPk(i);setTimeout(function(){var n=[...qa,i];setQa(n);setPk(-1);if(qi<QUIZ.length-1)setQi(qi+1);else setQr(calcQuiz(n))},250)}
+  function handleImg(e){
+    var files=Array.from(e.target.files);if(!files.length)return;
+    files.forEach(function(f){
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement("canvas");
+        var maxW=1200,maxH=1200;
+        var w=img.width,h=img.height;
+        if(w>maxW){h=h*(maxW/w);w=maxW;}
+        if(h>maxH){w=w*(maxH/h);h=maxH;}
+        canvas.width=w;canvas.height=h;
+        var ctx2=canvas.getContext("2d");
+        ctx2.drawImage(img,0,0,w,h);
+        var compressed=canvas.toDataURL("image/jpeg",0.6).split(",")[1];
+        setImgs(function(prev){return prev.concat([compressed])});
+        setImgNames(function(prev){return prev.concat([f.name])});
+        URL.revokeObjectURL(img.src);
+      };
+      img.src=URL.createObjectURL(f);
+    });
+  }
+
+  function shakeQian(){
+    setQianShaking(true);setQianResult(null);
+    setTimeout(function(){
+      setQianResult(QIAN[Math.floor(Math.random()*QIAN.length)]);
+      setQianShaking(false);
+    },1500);
+  }
+  function doBazi(){
+    var b1=calcBazi(parseInt(bDate1.y),parseInt(bDate1.m),parseInt(bDate1.d));
+    var b2=calcBazi(parseInt(bDate2.y),parseInt(bDate2.m),parseInt(bDate2.d));
+    setBaziResult(baziCompat(b1,b2));
+  }
+  function doFortune(){
+    setFortuneResult(calcFortune(parseInt(fMonth),parseInt(fDay)));
+  }
+
+  function startTarot(){
+    var shuffled=[].concat(TAROT).sort(function(){return Math.random()-.5}).slice(0,12);
+    shuffled=shuffled.map(function(c){return Object.assign({},c,{reversed:Math.random()>.6})});
+    setTarotPool(shuffled);setTarotStep("pick");setTarotPicked([]);setTarotCards(null);setTarotRevealed([false,false,false]);setSynthesis(getSynthesis());
+  }
+  function pickCard(idx){
+    if(tarotPicked.length>=3||tarotPicked.indexOf(idx)!==-1)return;
+    var newPicked=tarotPicked.concat([idx]);
+    setTarotPicked(newPicked);
+    if(newPicked.length===3){
+      var labels=["过去","现在","未来"];
+      var descs=["影响你现在的根源","你当前的状态与能量","即将到来的趋势"];
+      var picked=newPicked.map(function(pi,i){return Object.assign({},tarotPool[pi],{pos:labels[i],posDesc:descs[i]})});
+      setTarotCards(picked);setTarotStep("reveal");
+    }
+  }
+  function revealCard(i){var n=[...tarotRevealed];n[i]=true;setTarotRevealed(n)}
+
+  async function submit(){
+    if(!text.trim()&&!imgs.length)return;
+    if((pg==="diagnose"||pg==="predict")&&step==="input"){setStep("context");return}
+    setStep("loading");setErr(null);
+    var mList={diagnose:["扫描互动模式","分析依恋信号","生成双人报告"],translate:["解码潜台词","翻译真实意图"],check:["评估杀伤力","模拟Ta反应"],predict:["扫描关系轨迹","模拟未来走向"]};
+    var msgs=mList[pg]||mList.diagnose;var n=0;setLm(msgs[0]);
+    var iv=setInterval(function(){n++;setLm(msgs[n%msgs.length])},1200);
+    try{
+      var um="";
+      if(pg==="diagnose")um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"请分析这些聊天记录截图");
+      else if(pg==="translate")um="Ta说的话：\n"+text;
+      else if(pg==="check")um="对方类型："+(pType?TI[pType].label:"未知")+"\n\n我想发："+text;
+      else um=(ctx?"关系背景："+ctx+"\n\n":"")+(text.trim()?"聊天记录：\n"+text:"请分析这些聊天记录截图");
+      var r2=await callAI(P[pg],um,imgs.length>0?imgs:null);clearInterval(iv);setRes(r2);setStep("result");
+    }catch(e){clearInterval(iv);setErr(e.message||"出错了");setStep("input")}
+  }
+
+  var TABS=[{id:"quiz",label:"测试",icon:"🧪",c:"#FF922B"},{id:"diagnose",label:"确诊",icon:"🩺",c:C.wine},{id:"translate",label:"翻译",icon:"🔮",c:C.plum},{id:"check",label:"发不发",icon:"💊",c:C.sage},{id:"predict",label:"预测",icon:"🔭",c:"#5B8FB9"},{id:"tarot",label:"塔罗",icon:"🌙",c:C.gold}];
+  var curC=(TABS.find(function(t){return t.id===pg})||{}).c||C.wine;
+  var hasInput=text.trim()||imgs.length;
+
+  function ShareBar(){return <div style={{textAlign:"center",margin:"18px 0 8px"}}>
+    <div className="sans" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 22px",borderRadius:999,background:"linear-gradient(135deg,"+C.gold+"15,"+C.plum+"15)",fontSize:13,color:C.sub,cursor:"pointer"}} onClick={function(){if(navigator.share){navigator.share({title:String.fromCharCode(24050,35835)+" Yidu",url:"https://yidu.click"}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText("https://yidu.click").then(function(){alert(String.fromCharCode(38142,25509,24050,22797,21046,65292,24555,21435,20998,20139,32473,26379,21451,21543))})}}}>
+      {String.fromCharCode(128242)} {String.fromCharCode(25130,22270,20998,20139,32467,26524)}
+    </div>
+    <div className="sans" style={{fontSize:11,color:C.muted,marginTop:8}}>{String.fromCharCode(25226,32467,26524,36716,32473,84,97,30475,65292,30475,84,97,30340,21453,24212,23601,30693,36947,20934,19981,20934)}</div>
+  </div>}
+
+
+  useEffect(function(){
+    function handleScroll(){
+      var el=document.getElementById("parallax-bg");
+      if(el)el.style.transform="translateY("+window.scrollY*0.3+"px)";
+    }
+    window.addEventListener("scroll",handleScroll,{passive:true});
+    return function(){window.removeEventListener("scroll",handleScroll)};
+  },[]);
+
+  return <div className="sans" style={{minHeight:"100vh",color:C.ink,paddingBottom:80}}>
+    <style>{CSS}</style>
+    <div id="parallax-bg"/>
+    <div className="app-wrap">
+
+    {/* ═══ HEADER ═══ */}
+    <div style={{padding:"48px 24px 16px",textAlign:"center"}}>
+      <div onClick={goHome} style={{cursor:"pointer"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 16px",borderRadius:999,background:"rgba(255,255,255,.5)",border:"1px solid rgba(255,255,255,.7)",marginBottom:14}}>
+          <span style={{width:5,height:5,borderRadius:"50%",background:C.gold}}/>
+          <span style={{fontSize:9,letterSpacing:6,color:C.sub,fontWeight:600,textTransform:"uppercase"}} className="sans">attachment analyzer</span>
+        </div>
+        <h1 className="serif" style={{fontSize:52,fontWeight:900,color:C.ink,letterSpacing:8,lineHeight:1}}>已读</h1>
+        <p className="sans" style={{fontSize:12,color:C.sub,marginTop:10,fontWeight:500,letterSpacing:3}}>Ta不是不爱你 — 是你们都有病</p>
+      </div>
+      {pg!=="home"&&<div style={{textAlign:"left",marginTop:16,maxWidth:500,margin:"16px auto 0",paddingLeft:16}}>
+        <span onClick={goHome} className="sans" style={{fontSize:13,color:C.gold,fontWeight:700,cursor:"pointer",display:"inline-block",padding:"6px 0"}}>{"< "}{String.fromCharCode(36820,22238,39318,39029)}</span>
+      </div>}
+    </div>
+
+    <div style={{padding:"0 16px",maxWidth:500,margin:"0 auto"}}>
+
+    {/* ═══ HOME ═══ */}
+    {pg==="home"&&<div style={{animation:"fu .5s ease"}}>
+      {/* Floating orbs */}
+      <div style={{position:"fixed",top:"15%",left:"10%",width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(116,185,255,.08),transparent)",animation:"orbFloat 15s ease infinite",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",bottom:"20%",right:"5%",width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,rgba(162,155,254,.06),transparent)",animation:"orbFloat 20s ease infinite reverse",pointerEvents:"none",zIndex:0}}/>
+
+      {/* Daily quote glass */}
+      <div className="glass" style={{padding:"24px 26px",borderRadius:20,marginBottom:20}}>
+        <div className="serif" style={{fontSize:15,fontWeight:400,color:C.ink+"CC",lineHeight:2,fontStyle:"italic"}}>{"\u201C"}{DAILY}{"\u201D"}</div>
+        <div className="sans" style={{fontSize:9,color:C.gold,marginTop:12,fontWeight:700,letterSpacing:4,textTransform:"uppercase"}}>Daily Toxic Quote</div>
+      </div>
+
+      {/* BentoGrid */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+        <button onClick={function(){go("quiz")}} className="glass" style={{borderRadius:22,padding:"36px 20px 28px",cursor:"pointer",textAlign:"center",transition:"all .3s",gridRow:"span 2",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:52,marginBottom:20}}>🧪</div>
+          <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink,marginBottom:8}}>依恋类型测试</div>
+          <div className="sans" style={{fontSize:12,color:C.sub}}>24道专业题</div>
+          <div className="sans" style={{fontSize:11,color:C.gold,marginTop:12,fontWeight:600,letterSpacing:2}}>3 MIN</div>
+        </button>
+        <button onClick={function(){go("diagnose")}} className="glass" style={{borderRadius:22,padding:"28px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:36,marginBottom:12}}>🩺</div>
+          <div className="sans" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:4}}>聊天记录确诊</div>
+          <div className="sans" style={{fontSize:11,color:C.sub}}>AI双方分析</div>
+        </button>
+        <button onClick={function(){go("translate")}} className="glass" style={{borderRadius:22,padding:"28px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:36,marginBottom:12}}>🔮</div>
+          <div className="sans" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:4}}>翻译潜台词</div>
+          <div className="sans" style={{fontSize:11,color:C.sub}}>Ta到底什么意思</div>
+        </button>
+      </div>
+
+      {/* Row 2 */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+        {[{id:"check",icon:"💊",l:"发不发",s:"拦住冲动"},{id:"predict",icon:"🔭",l:"预测",s:"感情走向"},{id:"tarot",icon:"🌙",l:"塔罗",s:"抽三张牌"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} className="glass" style={{borderRadius:18,padding:"22px 10px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+          <div style={{fontSize:28,marginBottom:8}}>{t.icon}</div>
+          <div className="sans" style={{fontSize:13,fontWeight:700,color:C.ink}}>{t.l}</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:4}}>{t.s}</div>
+        </button>})}
+      </div>
+
+      {/* Mystical */}
+      <div className="glass-strong" style={{borderRadius:22,padding:"24px",marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/>
+          <span className="sans" style={{fontSize:9,color:C.gold,letterSpacing:5,textTransform:"uppercase",fontWeight:700}}>Mystical</span>
+          <div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+          {[{id:"qian",icon:"\uD83C\uDFEE",l:"月老灵签"},{id:"bazi",icon:"\uD83D\uDCAB",l:"八字速配"},{id:"fortune",icon:"\uD83C\uDF19",l:"今日运势"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} style={{background:"rgba(255,255,255,.4)",borderRadius:14,padding:"20px 8px 16px",border:"1px solid rgba(255,255,255,.06)",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,.08)"}} onMouseLeave={function(e){e.currentTarget.style.background="rgba(255,255,255,.04)"}}>
+            <div style={{fontSize:28,marginBottom:8}}>{t.icon}</div>
+            <div className="sans" style={{fontSize:12,fontWeight:700,color:C.ink+"CC"}}>{t.l}</div>
+          </button>})}
+        </div>
+      </div>
+
+      {/* Types */}
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,marginTop:8}}><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:9,color:C.muted,letterSpacing:5,textTransform:"uppercase",fontWeight:600}}>Attachment Styles</span><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {Object.keys(TI).map(function(k){return <div key={k} className="glass" style={{padding:"18px",borderRadius:18}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <span style={{fontSize:22}}>{TI[k].emoji}</span>
+              <span className="serif" style={{fontSize:14,fontWeight:700,color:TI[k].color}}>{TI[k].label}</span>
+            </div>
+            <div className="sans" style={{fontSize:11,color:C.sub,lineHeight:1.5}}>{TI[k].desc}</div>
+          </div>})}
+        </div>
+      </div>
+    </div>}
+
+    {/* ═══ QUIZ ═══ */}
+    {pg==="quiz"&&!qr&&<div key={qi} style={{animation:"fu .3s ease"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          {qi>0&&<button onClick={function(){setQi(qi-1);setQa(qa.slice(0,-1));setPk(-1)}} className="sans" style={{padding:"6px 14px",borderRadius:10,background:C.warm,color:C.wine,fontSize:13,fontWeight:700,border:"1px solid "+C.line,cursor:"pointer"}}>{"< "}{String.fromCharCode(19978,19968,39064)}</button>}
+          <span className="serif" style={{fontSize:14,fontWeight:700,color:C.gold}}>Q{qi+1}</span>
+        </div>
+        <span className="sans" style={{fontSize:12,color:C.muted}}>{qi+1}/{QUIZ.length}</span>
+      </div>
+      <div style={{height:3,background:C.line,borderRadius:99,overflow:"hidden",marginBottom:24}}>
+        <div style={{height:"100%",width:((qi+1)/QUIZ.length)*100+"%",background:"linear-gradient(90deg,"+C.gold+","+C.wine+")",borderRadius:99,transition:"width .3s"}}/>
+      </div>
+      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 20px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink,marginBottom:24,lineHeight:1.6}}>{QUIZ[qi].q}</div>
+        {QUIZ[qi].a.map(function(a,i){var on=pk===i;return <button key={i} onClick={function(){ansQ(i)}} style={{width:"100%",padding:"16px 20px",marginBottom:10,borderRadius:16,border:on?"2px solid "+C.gold:"2px solid "+C.line,background:on?C.gold+"12":C.bg,color:on?C.gold:C.ink,fontSize:14,fontWeight:500,textAlign:"left",cursor:"pointer",lineHeight:1.6,transition:"all .15s"}} className="sans">
+          <span style={{display:"inline-flex",width:24,height:24,borderRadius:8,background:on?C.gold:C.muted+"40",color:on?"#fff":C.sub,alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,marginRight:12,verticalAlign:"middle"}}>{String.fromCharCode(65+i)}</span>{a}
+        </button>})}
+      </div>
+    </div>}
+
+    {pg==="quiz"&&qr&&<div style={{animation:"fu .5s ease"}}>
+      <TCard type={qr.type}/>
+      <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:18,flexWrap:"wrap"}}>{TI[qr.type].traits.map(function(tr,i){return <span key={i} className="sans" style={{padding:"6px 14px",borderRadius:999,fontSize:12,fontWeight:600,background:TI[qr.type].bg,color:C.ink+"CC",border:"1px solid "+C.line}}>#{tr}</span>})}</div>
+      <div style={sec}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>🔍 你的画像</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].detail}</div></div>
+      <div style={sec}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.sub,marginBottom:14}}>各维度得分</div>
+        {Object.keys(qr.scores).map(function(k){var pct=Math.round((qr.scores[k]/QUIZ.length)*100);return <div key={k} style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}><span style={{fontSize:18,width:26}}>{TI[k].emoji}</span><span className="sans" style={{fontSize:13,width:50,color:C.sub,fontWeight:600}}>{TI[k].label}</span><div style={{flex:1,height:8,background:C.line,borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:TI[k].grad,borderRadius:99,transition:"width .8s"}}/></div><span className="sans" style={{fontSize:14,color:TI[k].color,fontWeight:700,width:36,textAlign:"right"}}>{pct}%</span></div>})}
+      </div>
+      <div style={{...sec,background:TI[qr.type].bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:10}}>💡 给你的话</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{TI[qr.type].advice}</div></div>
+      <ShareBar/>
+      <div style={{display:"flex",gap:10,marginTop:8}}>
+        <button onClick={function(){setQi(0);setQa([]);setQr(null)}} className="sans" style={{flex:1,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重测 ↻</button>
+        <button onClick={function(){go("diagnose")}} className="sans" style={{flex:1,padding:14,background:C.wine,color:C.ink,border:"none",borderRadius:16,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px "+C.wine+"30"}}>{String.fromCharCode(32842,22825,35760,24405,30830,35786)} {"\uD83E\uDE7A"}</button>
+      </div>
+      <div style={{textAlign:"center",marginTop:12}}>
+        <span className="sans" onClick={function(){if(navigator.clipboard){navigator.clipboard.writeText("https://yidu.click").then(function(){alert(String.fromCharCode(38142,25509,24050,22797,21046,65281,21457,32473,84,97,35753,84,97,20063,27979,19968,19979))})}}} style={{fontSize:13,color:C.gold,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(128279)} {String.fromCharCode(35753,84,97,20063,26469,27979,65292,30475,30475,20320,20204,26159,21738,31181,32452,21512)}</span>
+      </div>
+    </div>}
+
+    {/* ═══ TAROT ═══ */}
+    {pg==="tarot"&&<div style={{animation:"fu .5s ease"}}>
+      {/* Intro */}
+      {tarotStep==="intro"&&<div style={{textAlign:"center"}}>
+        <div style={{background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",borderRadius:28,padding:"48px 28px",color:C.ink,position:"relative",overflow:"hidden",marginBottom:20}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 30% 40%,rgba(196,155,106,.15),transparent 50%),radial-gradient(circle at 70% 60%,rgba(123,107,168,.15),transparent 50%)"}}/>
+          <div style={{fontSize:72,marginBottom:16,position:"relative",animation:"float 4s ease infinite"}}>🌙</div>
+          <div className="serif" style={{fontSize:28,fontWeight:700,marginBottom:8,position:"relative"}}>塔罗牌占卜</div>
+          <div className="sans" style={{fontSize:14,opacity:.7,position:"relative",lineHeight:1.7}}>从牌堆中凭直觉选出三张牌<br/>过去 · 现在 · 未来</div>
+        </div>
+        <button onClick={startTarot} className="sans" style={{width:"100%",padding:18,borderRadius:18,border:"none",fontSize:17,fontWeight:700,color:C.ink,cursor:"pointer",background:"linear-gradient(135deg,"+C.gold+","+C.wine+")",boxShadow:"0 8px 30px "+C.wine+"30",animation:"glow 3s ease infinite"}}>开始抽牌 ✨</button>
+      </div>}
+
+      {/* Pick cards */}
+      {tarotStep==="pick"&&tarotPool&&<div>
+        <div className="serif" style={{textAlign:"center",fontSize:16,color:C.ink,marginBottom:6}}>凭直觉选择三张牌</div>
+        <div className="sans" style={{textAlign:"center",fontSize:13,color:C.sub,marginBottom:20}}>
+          {tarotPicked.length===0?"第一张 · 代表过去":tarotPicked.length===1?"第二张 · 代表现在":tarotPicked.length===2?"第三张 · 代表未来":"✨ 选择完成"}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+          {tarotPool.map(function(card,i){
+            var isPicked=tarotPicked.indexOf(i)!==-1;
+            var pickOrder=tarotPicked.indexOf(i);
+            var labels=["过去","现在","未来"];
+            return <div key={i} onClick={function(){pickCard(i)}} style={{
+              cursor:isPicked||tarotPicked.length>=3?"default":"pointer",
+              opacity:isPicked?.5:1,
+              transition:"all .3s ease",
+              transform:isPicked?"scale(.92)":"scale(1)",
+            }}>
+              <div style={{
+                borderRadius:16,padding:"28px 12px",
+                background:isPicked?"linear-gradient(160deg,"+C.warm+",#F0E6F6)":"linear-gradient(160deg,#2D2A32,#4A3F5C)",
+                border:isPicked?"2px solid "+C.gold:"2px solid rgba(196,155,106,.2)",
+                textAlign:"center",minHeight:120,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                boxShadow:isPicked?"0 4px 16px rgba(196,155,106,.15)":"0 4px 20px rgba(45,42,50,.12)",
+              }}>
+                {!isPicked&&<div>
+                  <div style={{fontSize:32,marginBottom:6,opacity:.5}}>🌙</div>
+                  <div className="sans" style={{fontSize:10,color:C.sub,letterSpacing:1}}>{i+1}</div>
+                </div>}
+                {isPicked&&<div>
+                  <div style={{fontSize:10,color:C.gold,fontWeight:700,letterSpacing:2}} className="sans">{labels[pickOrder]}</div>
+                  <div style={{fontSize:24,margin:"6px 0"}}>✦</div>
+                  <div className="sans" style={{fontSize:10,color:C.sub}}>已选择</div>
+                </div>}
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>}
+
+      {/* Reveal cards */}
+      {tarotStep==="reveal"&&tarotCards&&<div>
+        <div className="serif" style={{textAlign:"center",fontSize:14,color:C.gold,fontStyle:"italic",marginBottom:20}}>点击卡牌翻开</div>
+        <div style={{display:"flex",gap:12,marginBottom:24}}>
+          {tarotCards.map(function(card,i){
+            var revealed=tarotRevealed[i];
+            return <div key={i} onClick={function(){revealCard(i)}} style={{flex:1,cursor:revealed?"default":"pointer"}}>
+              <div className="sans" style={{textAlign:"center",fontSize:11,color:C.gold,fontWeight:700,marginBottom:8,letterSpacing:2}}>{card.pos}</div>
+              <div style={{
+                borderRadius:18,padding:revealed?"20px 14px":"28px 14px",
+                background:revealed?"linear-gradient(160deg,"+C.warm+",#fff)":"linear-gradient(160deg,#2D2A32,#4A3F5C)",
+                border:"2px solid "+(revealed?C.gold+"40":"rgba(196,155,106,.3)"),
+                textAlign:"center",minHeight:180,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                transition:"all .4s ease",
+                boxShadow:revealed?"0 8px 30px rgba(45,42,50,.08)":"0 4px 20px rgba(45,42,50,.15)",
+              }}>
+                {!revealed&&<div><div style={{fontSize:40,marginBottom:8,opacity:.6}}>🌙</div><div className="serif" style={{fontSize:12,color:C.sub,fontStyle:"italic"}}>tap to reveal</div></div>}
+                {revealed&&<div>
+                  <div style={{fontSize:36,marginBottom:8}}>{card.icon}</div>
+                  <div className="serif" style={{fontSize:16,fontWeight:700,color:C.ink,marginBottom:4}}>{card.name}</div>
+                  <div className="sans" style={{fontSize:10,color:card.reversed?C.rose:C.gold,fontWeight:700,letterSpacing:1}}>{card.reversed?"逆位":"正位"}</div>
+                </div>}
+              </div>
+            </div>
+          })}
+        </div>
+
+        {/* Readings */}
+        {tarotRevealed.every(Boolean)&&<div style={{animation:"fu .5s ease"}}>
+          {/* Synthesis */}
+          <div style={{...sec,background:"linear-gradient(135deg,#2D2A32,#4A3F5C)",border:"none",color:C.ink,marginBottom:14}}>
+            <div className="serif" style={{fontSize:13,color:C.gold,fontStyle:"italic",letterSpacing:2,marginBottom:10}}>综合解读</div>
+            <div className="sans" style={{fontSize:15,lineHeight:2,opacity:.9}}>{synthesis}</div>
+          </div>
+
+          {/* Individual Cards */}
+          {tarotCards.map(function(card,i){
+            var reading = card.reversed ? card.rev : card.up;
+            return <div key={i} style={{...sec,marginBottom:14,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,paddingBottom:16,borderBottom:"1px solid "+C.line}}>
+                <div style={{width:52,height:52,borderRadius:16,background:card.reversed?"linear-gradient(135deg,#FFE3E3,#FFC9C9)":"linear-gradient(135deg,"+C.warm+",#FFF3E0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}}>{card.icon}</div>
+                <div style={{flex:1}}>
+                  <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink}}>{card.pos} · {card.name}</div>
+                  <div className="sans" style={{fontSize:11,color:C.sub,marginTop:2}}>{card.posDesc}</div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+                  <div className="sans" style={{fontSize:11,color:card.reversed?C.rose:C.gold,fontWeight:700,letterSpacing:1}}>{card.reversed?"逆位":"正位"}</div>
+                  <div className="sans" style={{fontSize:10,color:C.muted,marginTop:2}}>{card.num} · {card.element}</div>
+                </div>
+              </div>
+              <div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD",marginBottom:16}}>{reading}</div>
+              <div style={{padding:"14px 18px",background:card.reversed?"#FFF5F3":C.warm,borderRadius:14,marginBottom:12,borderLeft:"3px solid "+(card.reversed?C.rose:C.gold)}}>
+                <div className="sans" style={{fontSize:12,fontWeight:700,color:card.reversed?C.rose:C.gold,marginBottom:4}}>💕 感情启示</div>
+                <div className="serif" style={{fontSize:14,fontWeight:400,color:C.ink,fontStyle:"italic",lineHeight:1.7}}>{card.love}</div>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1,padding:"12px 14px",background:C.bg,borderRadius:12}}>
+                  <div className="sans" style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:4,letterSpacing:1}}>能量</div>
+                  <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{card.energy}</div>
+                </div>
+                <div style={{flex:1,padding:"12px 14px",background:C.bg,borderRadius:12}}>
+                  <div className="sans" style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:4,letterSpacing:1}}>时机</div>
+                  <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.5}}>{card.timing}</div>
+                </div>
+              </div>
+              <div style={{marginTop:12,padding:"14px 18px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:14}}>
+                <div className="sans" style={{fontSize:12,fontWeight:700,color:C.plum,marginBottom:4}}>✦ 行动指引</div>
+                <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{card.action}</div>
+              </div>
+            </div>
+          })}
+
+          <div style={{marginTop:8,textAlign:"center"}}><span className="sans" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:999,background:"linear-gradient(135deg,"+C.gold+"15,"+C.plum+"15)",fontSize:13,color:C.sub}}>📱 截图分享你的牌阵</span></div>
+          <button onClick={startTarot} className="sans" style={{width:"100%",marginTop:14,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>重新抽牌 ↻</button>
+        </div>}
+      </div>}
+    </div>}
+
+    {/* ═══ INPUT ═══ */}
+    {pg!=="home"&&pg!=="quiz"&&pg!=="tarot"&&pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="input"&&<div style={{animation:"fu .4s ease"}}>
+      {err&&<div className="sans" style={{padding:"14px 18px",background:"#FFF5F5",borderRadius:14,marginBottom:14,fontSize:13,color:C.rose,border:"1px solid #FFE3E3"}}>{err}</div>}
+      <div style={{background:C.card,borderRadius:24,padding:26,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        {pg==="check"&&<div style={{marginBottom:18}}>
+          <div className="serif" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:12}}>Ta的依恋类型</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["avoidant","anxious","secure","disorganized"].map(function(k){return <button key={k} onClick={function(){setPType(k)}} className="sans" style={{padding:"9px 15px",borderRadius:14,border:pType===k?"2px solid "+TI[k].color:"2px solid "+C.line,background:pType===k?TI[k].bg:C.card,color:pType===k?TI[k].color:C.sub,fontSize:13,fontWeight:600,cursor:"pointer"}}>{TI[k].emoji} {TI[k].label}</button>})}</div>
+        </div>}
+        {(pg==="diagnose"||pg==="predict")&&<div style={{marginBottom:16}}>
+          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:16,borderRadius:16,border:"2px dashed "+(imgs.length?C.sage+"80":C.line),cursor:"pointer",color:imgs.length?C.sage:C.muted,fontSize:14,fontWeight:600,background:imgs.length?"#F0FFF4":C.bg,transition:"all .2s"}} className="sans">
+            <span style={{fontSize:22}}>{imgs.length?"📎":"📷"}</span>{imgs.length?imgs.length+"张截图已选择 · 点击继续添加":"上传聊天截图（可多选）"}
+            <input type="file" accept="image/*" multiple onChange={handleImg} style={{display:"none"}}/>
+          </label>
+          {imgs.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+            {imgNames.map(function(name,i){return <span key={i} className="sans" style={{padding:"4px 10px",borderRadius:999,fontSize:11,background:"#F0FFF4",color:C.sage,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+              📷 {name.length>15?name.slice(0,15)+"...":name}
+              <span onClick={function(e){e.preventDefault();e.stopPropagation();setImgs(function(p){return p.filter(function(_,j){return j!==i})});setImgNames(function(p){return p.filter(function(_,j){return j!==i})})}} style={{cursor:"pointer",fontSize:14,color:"#ccc",marginLeft:2}}>×</span>
+            </span>})}
+          </div>}
+          <div className="sans" style={{textAlign:"center",fontSize:12,color:C.muted,margin:"12px 0 6px"}}>—— 或 ——</div>
+        </div>}
+        <textarea className="sans" style={{width:"100%",padding:"14px 4px",background:"transparent",border:"none",color:C.ink,fontSize:15,lineHeight:1.9,resize:"none",outline:"none"}}
+          rows={pg==="translate"||pg==="check"?4:7}
+          placeholder={pg==="diagnose"?"粘贴聊天记录...":pg==="translate"?"Ta说的话（可以多条一行一句）...":pg==="check"?"你想发的消息...":"粘贴聊天记录..."}
+          value={text} onChange={function(e){setText(e.target.value)}}/>
+      </div>
+      <button onClick={submit} disabled={!hasInput} className="sans" style={{width:"100%",marginTop:16,padding:17,borderRadius:18,border:"none",fontSize:16,fontWeight:700,color:C.ink,cursor:hasInput?"pointer":"default",background:hasInput?curC:"#ddd",boxShadow:hasInput?"0 8px 28px "+curC+"30":"none",transition:"all .2s"}}>
+        {pg==="diagnose"?"开始确诊 🩺":pg==="translate"?"翻译 🔮":pg==="check"?"检测 💊":"预测 🔭"}
+      </button>
+    </div>}
+
+    {/* Context */}
+    {(pg==="diagnose"||pg==="predict")&&step==="context"&&<div style={{animation:"fu .4s ease"}}>
+      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 16px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+        <div className="serif" style={{fontSize:22,fontWeight:700,color:C.ink,marginBottom:8}}>Ta是你的什么人？</div>
+        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:20}}>比如：暧昧三个月 / 同事 / Ta总是已读不回</div>
+        <textarea className="sans" style={{width:"100%",padding:"14px 4px",background:"transparent",border:"none",borderTop:"1px solid "+C.line,color:C.ink,fontSize:15,lineHeight:1.9,resize:"none",outline:"none"}} rows={3} placeholder="正在折磨我的人..." value={ctx} onChange={function(e){setCtx(e.target.value)}}/>
+      </div>
+      <div style={{display:"flex",gap:10,marginTop:14}}>
+        <button onClick={function(){setStep("input")}} className="sans" style={{flex:1,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>返回</button>
+        <button onClick={submit} className="sans" style={{flex:2,padding:14,background:curC,color:C.ink,border:"none",borderRadius:16,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 6px 22px "+curC+"30"}}>{pg==="diagnose"?"确诊 🩺":"预测 🔭"}</button>
+      </div>
+    </div>}
+
+    {/* Loading */}
+    {pg!=="qian"&&pg!=="bazi"&&pg!=="fortune"&&step==="loading"&&<div style={{animation:"fu .4s ease"}}>
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 28px",borderRadius:999,background:C.card,boxShadow:"0 4px 24px rgba(45,42,50,.06)",border:"1px solid "+C.line}}><Dots/><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:500}}>{lm}</span></div>
+      </div>
+      {/* Skeleton */}
+      <div style={{opacity:.5}}>
+        <div style={{display:"flex",gap:12,marginBottom:14}}>
+          <div style={{flex:1,height:140,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+          <div style={{flex:1,height:140,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+        </div>
+        <div style={{height:80,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite",marginBottom:14}}/>
+        <div style={{height:120,borderRadius:20,background:"linear-gradient(90deg,"+C.line+","+C.warm+","+C.line+")",backgroundSize:"200% 100%",animation:"shimmer 1.5s infinite"}}/>
+      </div>
+    </div>}
+
+    {/* ═══ DIAGNOSE RESULT ═══ */}
+    {pg==="diagnose"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{display:"flex",gap:12,marginBottom:14}}><TCard type={res.user_type} label={"你："+res.user_label} small/><TCard type={res.partner_type} label={"Ta："+res.partner_label} small/></div>
+      <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🔗 互动模式</div><div className="sans" style={{fontSize:15,lineHeight:1.9,color:C.ink+"DD"}}>{res.match}</div></div>
+      <div style={sec}><div style={{display:"flex",justifyContent:"space-between"}}><span className="sans" style={{fontSize:13,color:C.sub,fontWeight:700}}>置信度</span><span className="sans" style={{fontSize:24,fontWeight:900,color:C.wine}}>{res.confidence}%</span></div><div style={{height:5,background:C.line,borderRadius:99,overflow:"hidden",marginTop:10}}><div style={{height:"100%",width:res.confidence+"%",background:"linear-gradient(90deg,"+C.wine+","+C.plum+")",borderRadius:99}}/></div></div>
+      <div style={{...sec,padding:24}}><div className="sans" style={{fontSize:13,color:C.sub,fontWeight:700,marginBottom:14}}>暴露信号</div>
+        {(res.signals||[]).map(function(s,i){return <div key={i} style={{display:"flex",gap:12,padding:"12px 0",borderBottom:i<2?"1px solid "+C.line:"none"}}><div style={{width:36,height:36,borderRadius:12,background:s.who==="用户"?"#FFF5F3":"#F0F6FA",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{s.icon}</div><div style={{flex:1}}><div className="sans" style={{fontSize:12,color:C.sub,marginBottom:2}}>{s.who}</div><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:4}}>{"「"+s.msg+"」"}</div><div className="sans" style={{fontSize:13,color:C.sub}}>{"→ "+s.meaning}</div></div></div>})}
+      </div>
+      <div style={{...sec,background:(TI[res.user_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 给你</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.user_advice}</div></div>
+      <div style={{...sec,background:(TI[res.partner_type]||TI.secure).bg,border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>🎯 应对Ta</div><div className="sans" style={{fontSize:14,lineHeight:1.9,color:C.ink+"DD"}}>{res.partner_advice}</div></div>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ TRANSLATE RESULT ═══ */}
+    {pg==="translate"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      {(res.translations||[]).map(function(tr,ti){var colors=[C.rose,"#E6A817",C.plum];return <div key={ti} style={{...sec,marginBottom:14}}>
+        <div style={{padding:"14px 18px",background:C.warm,borderRadius:14,marginBottom:16,borderLeft:"3px solid "+C.plum}}>
+          <div className="sans" style={{fontSize:11,color:C.sub,fontWeight:700,marginBottom:2}}>Ta说</div>
+          <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink}}>{"「"+tr.original+"」"}</div>
+        </div>
+        <div className="serif" style={{fontSize:17,fontWeight:700,color:C.plum,marginBottom:14}}>{tr.verdict}</div>
+        {(tr.possibilities||[]).map(function(p,i){return <div key={i} style={{display:"flex",gap:10,padding:"10px 0",opacity:i===0?1:.55,borderBottom:i<2?"1px solid "+C.line:"none"}}>
+          <div className="sans" style={{width:28,height:28,borderRadius:8,background:colors[i]+"18",color:colors[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{p.label}</div>
+          <div style={{flex:1}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.ink}}>{p.meaning} <span style={{fontSize:11,color:C.sub}}>{p.percent}%</span></div><div className="sans" style={{fontSize:12,color:C.sub}}>{p.reason}</div></div>
+        </div>})}
+        <div style={{marginTop:12,padding:"10px 14px",background:"#FFF5F3",borderRadius:12,fontSize:13}} className="sans"><span style={{fontWeight:800,color:C.rose}}>最可能：{tr.most_likely}</span> <span style={{color:C.sub}}>{tr.why}</span></div>
+      </div>})}
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ CHECK RESULT ═══ */}
+    {pg==="check"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{...sec,padding:24}}>
+        <div style={{textAlign:"center",padding:"32px 20px 28px",marginBottom:20,borderRadius:22,background:res.danger?"linear-gradient(135deg,#FFF5F3,#FFE3E3)":"linear-gradient(135deg,#F0FFF4,#D3F9D8)"}}>
+          <div style={{fontSize:52,marginBottom:10}}>{res.danger?"🚨":"✅"}</div>
+          <div className="serif" style={{fontSize:38,fontWeight:900,color:res.danger?"#C4616C":C.sage}}>{res.verdict}</div>
+        </div>
+        {res.type_note&&<div className="sans" style={{padding:"14px 18px",background:C.warm,borderRadius:14,marginBottom:16,fontSize:14,color:C.ink+"CC",lineHeight:1.8}}><span style={{fontWeight:700}}>🎯 </span>{res.type_note}</div>}
+        {res.danger&&<div>
+          <div style={{display:"flex",gap:10,marginBottom:14}}>
+            <div style={{flex:1,padding:16,background:"#FFF5F3",borderRadius:14}}><div className="sans" style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:4}}>会触发</div><div className="sans" style={{fontSize:13,fontWeight:800,color:C.rose}}>{res.trigger}</div></div>
+            <div style={{flex:1,padding:16,background:C.warm,borderRadius:14}}><div className="sans" style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:4}}>Ta会</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.prediction}</div></div>
+          </div>
+          <div style={{padding:22,borderRadius:18,background:"linear-gradient(135deg,#F0FFF4,#E6FCF5)",border:"2px solid #C3FAE8"}}>
+            <div className="sans" style={{fontSize:12,fontWeight:800,color:C.sage,marginBottom:8}}>✨ 替代版本</div>
+            <div className="serif" style={{fontSize:17,fontWeight:700,color:C.ink,marginBottom:6}}>{"「"+res.alternative+"」"}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub}}>{"→ "+res.reason}</div>
+          </div>
+        </div>}
+        {!res.danger&&<div style={{padding:18,background:"#F0FFF4",borderRadius:14}} className="sans"><div style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.reason}</div></div>}
+      </div>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ PREDICT RESULT ═══ */}
+    {pg==="predict"&&step==="result"&&res&&<div style={{animation:"fu .5s ease"}}>
+      <div style={{...sec,background:"linear-gradient(135deg,#EDF2FF,#F0E6F6)",border:"none",marginBottom:14}}>
+        <div className="sans" style={{fontSize:12,color:C.gold,fontWeight:700,marginBottom:6,letterSpacing:1}}>当前阶段</div>
+        <div className="serif" style={{fontSize:22,fontWeight:900,color:C.ink,marginBottom:8}}>{res.stage}</div>
+        <div className="sans" style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.stage_desc}</div>
+      </div>
+      <div className="serif" style={{fontSize:14,color:C.gold,fontStyle:"italic",marginBottom:12}}>🔮 时间线预测</div>
+      {(res.predictions||[]).map(function(p,i){var bgs=["#FFF5F3","#FFF9E6","#F0FFF4"];return <div key={i} style={{...sec,display:"flex",gap:14,alignItems:"flex-start"}}>
+        <div style={{width:46,height:46,borderRadius:14,background:bgs[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{p.emoji}</div>
+        <div style={{flex:1}}><div className="sans" style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.time}</span><span style={{fontSize:12,color:C.sub,fontWeight:700}}>{p.prob}%</span></div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{p.scene}</div></div>
+      </div>})}
+      <div style={{...sec,background:"#FFF5F3",border:"none"}}><div className="sans" style={{fontSize:13,fontWeight:800,color:C.rose,marginBottom:6}}>⚠️ 转折点</div><div className="sans" style={{fontSize:14,color:C.ink+"CC",lineHeight:1.8}}>{res.turning}</div></div>
+      <div style={{display:"flex",gap:10,marginTop:14}}>
+        <div style={{flex:1,...sec,background:"#F0FFF4",border:"none"}}><div className="sans" style={{fontSize:12,fontWeight:700,color:C.sage,marginBottom:4}}>最好</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.best}</div></div>
+        <div style={{flex:1,...sec,background:"#FFF5F3",border:"none"}}><div className="sans" style={{fontSize:12,fontWeight:700,color:C.rose,marginBottom:4}}>最差</div><div className="sans" style={{fontSize:13,color:C.ink+"CC"}}>{res.worst}</div></div>
+      </div>
+      <div style={{...sec,background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",border:"none"}}><div className="serif" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:8}}>💡 你现在应该做的一件事</div><div className="sans" style={{fontSize:15,fontWeight:600,color:C.ink,lineHeight:1.9}}>{res.todo}</div></div>
+      <ShareBar/>
+      <button onClick={resetInput} className="sans" style={{width:"100%",marginTop:8,padding:14,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>再来一次 ↻</button>
+    </div>}
+
+    {/* ═══ QIAN (月老灵签) ═══ */}
+    {pg==="qian"&&<div style={{animation:"fu .5s ease"}}>
+      {!qianResult&&!qianShaking&&<div style={{textAlign:"center"}}>
+        <div style={{background:"linear-gradient(135deg,rgba(45,52,54,.85),rgba(45,52,54,.75))",borderRadius:24,padding:"48px 28px",color:C.ink,position:"relative",overflow:"hidden",marginBottom:20}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 30% 40%,rgba(196,114,127,.1),transparent 50%),radial-gradient(circle at 70% 60%,rgba(184,151,106,.1),transparent 50%)"}}/>
+          <div style={{fontSize:72,marginBottom:16,position:"relative",animation:"float 4s ease infinite"}}>{"\uD83C\uDFEE"}</div>
+          <div className="serif" style={{fontSize:28,fontWeight:700,marginBottom:8,position:"relative"}}>{String.fromCharCode(26376,32769,28789,31614)}</div>
+          <div className="sans" style={{fontSize:14,opacity:.6,position:"relative",lineHeight:1.7}}>{String.fromCharCode(24515,20013,24819,24819,65292,24515,26376,32769,25351,36335)}</div>
+        </div>
+        <button onClick={shakeQian} className="sans" style={{width:"100%",padding:18,borderRadius:18,border:"none",fontSize:17,fontWeight:700,color:C.ink,cursor:"pointer",background:"linear-gradient(135deg,"+C.gold+","+C.rose+")",boxShadow:"0 8px 30px rgba(184,151,106,.2)",animation:"glow 3s ease infinite"}}>{String.fromCharCode(25671,31614)} {"\u2728"}</button>
+      </div>}
+      {qianShaking&&<div style={{textAlign:"center",padding:"80px 20px"}}>
+        <div style={{fontSize:80,animation:"float .3s ease infinite"}}>{"\uD83C\uDFEE"}</div>
+        <div className="sans" style={{fontSize:15,color:C.sub,marginTop:20}}>{String.fromCharCode(26376,32769,27491,22312,20026,20320,25277,31614,8230,8230)}</div>
+      </div>}
+      {qianResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,rgba(45,52,54,.85),rgba(45,52,54,.75))",borderRadius:24,padding:"36px 28px",color:C.ink,textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 50%,rgba(184,151,106,.1),transparent 60%)"}}/>
+          <div style={{fontSize:12,color:"#BBB",letterSpacing:4,marginBottom:8,position:"relative"}} className="sans">{qianResult.rank}</div>
+          <div className="serif" style={{fontSize:18,lineHeight:2.2,position:"relative",color:"rgba(255,255,255,.9)"}}>{qianResult.poem}</div>
+        </div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.gold,marginBottom:8}}>{"\uD83D\uDD2E "}{String.fromCharCode(30333,35805)}</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{qianResult.read}</div></div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:13,fontWeight:700,color:C.sage,marginBottom:8}}>{"\uD83D\uDCA1 "}{String.fromCharCode(25351,24341)}</div><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{qianResult.guide}</div></div>
+        <div style={{display:"flex",gap:12,marginTop:16}}>
+          <div style={{flex:1,padding:"18px",background:"#F0FFF4",borderRadius:16,border:"1px solid #C3FAE8"}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.sage,marginBottom:6}}>{String.fromCharCode(23452)}</div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{qianResult.yi}</div></div>
+          <div style={{flex:1,padding:"18px",background:"#FFF5F5",borderRadius:16,border:"1px solid #FFE3E3"}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:6}}>{String.fromCharCode(24524)}</div><div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{qianResult.ji}</div></div>
+        </div>
+        <button onClick={shakeQian} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,25671,19968,27425)} {"\u21BB"}</button>
+      </div>}
+    </div>}
+
+    {/* ═══ BAZI (八字速配) ═══ */}
+    {pg==="bazi"&&<div style={{animation:"fu .5s ease"}}>
+      {!baziResult&&<div>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:48,marginBottom:12,lineHeight:1.4}}>{"\uD83D\uDCAB"}</div>
+          <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20843,23383,36895,37197)}</div>
+          <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:16}}>{String.fromCharCode(36755,20837,21452,26041,29983,26085,65292,30475,30475,32536,20998,20960,20309)}</div>
+          <div style={{display:"inline-flex",borderRadius:12,border:"1px solid "+C.line,overflow:"hidden"}}>
+            <button onClick={function(){setCalType("solar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="solar"?C.wine:"#fff",color:calType==="solar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20844,21382)}</button>
+            <button onClick={function(){setCalType("lunar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="lunar"?C.wine:"#fff",color:calType==="lunar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20892,21382)}</button>
+          </div>
+        </div>
+        {[{label:String.fromCharCode(20320,30340,29983,26085),date:bDate1,setDate:setBDate1},{label:"Ta"+String.fromCharCode(30340,29983,26085),date:bDate2,setDate:setBDate2}].map(function(item,idx){return <div key={idx} style={{padding:"20px",background:C.card,borderRadius:20,boxShadow:"0 2px 20px rgba(26,31,54,.04)",border:"1px solid "+C.line,marginBottom:12}}>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:12}}>{item.label}</div>
+          <div style={{display:"flex",gap:8}}>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(24180)} value={item.date.y} onChange={function(e){var v=Object.assign({},item.date,{y:e.target.value});item.setDate(v)}} className="sans" style={{flex:2,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={item.date.m} onChange={function(e){var v=Object.assign({},item.date,{m:e.target.value});item.setDate(v)}} className="sans" style={{flex:1,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+            <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={item.date.d} onChange={function(e){var v=Object.assign({},item.date,{d:e.target.value});item.setDate(v)}} className="sans" style={{flex:1,minWidth:0,padding:"12px 8px",borderRadius:12,border:"1px solid "+C.line,fontSize:15,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          </div>
+        </div>})}
+        <button onClick={doBazi} disabled={!bDate1.y||!bDate1.m||!bDate1.d||!bDate2.y||!bDate2.m||!bDate2.d} className="sans" style={{width:"100%",marginTop:8,padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:C.ink,background:(bDate1.y&&bDate1.m&&bDate1.d&&bDate2.y&&bDate2.m&&bDate2.d)?C.wine:"#ddd",boxShadow:(bDate1.y&&bDate2.y)?"0 8px 28px rgba(44,62,107,.15)":"none",border:"none",cursor:"pointer"}}>{String.fromCharCode(24320,22987,21512,30424)} {"\uD83D\uDCAB"}</button>
+      </div>}
+      {baziResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,rgba(45,52,54,.85),rgba(45,52,54,.75))",borderRadius:24,padding:"36px 24px",color:C.ink,textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 30%,rgba(184,151,106,.12),transparent 60%)"}}/>
+          <div className="sans" style={{fontSize:12,color:C.gold,letterSpacing:3,marginBottom:12,position:"relative"}}>{String.fromCharCode(32536,20998,25351,25968)}</div>
+          <div className="serif" style={{fontSize:56,fontWeight:900,color:C.ink,position:"relative"}}>{baziResult.score}<span style={{fontSize:20}}>%</span></div>
+          <div className="serif" style={{fontSize:22,fontWeight:700,color:C.gold,marginTop:8,position:"relative"}}>{baziResult.info.type}</div>
+        </div>
+        <div style={{display:"flex",gap:12,marginBottom:16}}>
+          <div style={{flex:1,...sec,textAlign:"center",marginTop:0}}>
+            <div className="sans" style={{fontSize:11,color:C.muted,marginBottom:6}}>{String.fromCharCode(20320)}</div>
+            <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink}}>{baziResult.gz1}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub,marginTop:4}}>{baziResult.w1}{String.fromCharCode(21629)} · {baziResult.sx1}{String.fromCharCode(24180)}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center"}}><span style={{fontSize:24,color:C.gold}}>{"\u2764\uFE0F"}</span></div>
+          <div style={{flex:1,...sec,textAlign:"center",marginTop:0}}>
+            <div className="sans" style={{fontSize:11,color:C.muted,marginBottom:6}}>Ta</div>
+            <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink}}>{baziResult.gz2}</div>
+            <div className="sans" style={{fontSize:12,color:C.sub,marginTop:4}}>{baziResult.w2}{String.fromCharCode(21629)} · {baziResult.sx2}{String.fromCharCode(24180)}</div>
+          </div>
+        </div>
+        <div style={{...sec}}><div className="sans" style={{fontSize:15,lineHeight:2,color:C.ink+"DD"}}>{baziResult.info.desc}</div></div>
+        <button onClick={function(){setBaziResult(null)}} className="sans" style={{width:"100%",marginTop:16,padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(37325,26032,21512,30424)} {"\u21BB"}</button>
+      </div>}
+    </div>}
+
+    {/* ═══ FORTUNE (今日运势) ═══ */}
+    {pg==="fortune"&&<div style={{animation:"fu .5s ease"}}>
+      {!fortuneResult&&<div style={{textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:20,paddingTop:10}}>{"\uD83C\uDF19"}</div>
+        <div className="serif" style={{fontSize:24,fontWeight:700,color:C.ink,marginBottom:6}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
+        <div className="sans" style={{fontSize:13,color:C.sub,marginBottom:16}}>{String.fromCharCode(36755,20837,20320,30340,29983,26085,65292,26597,30475,20170,26085,24863,24773,22825,27668)}</div>
+        <div style={{display:"inline-flex",borderRadius:12,border:"1px solid "+C.line,overflow:"hidden",marginBottom:20}}>
+          <button onClick={function(){setCalType("solar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="solar"?C.wine:"#fff",color:calType==="solar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20844,21382)}</button>
+          <button onClick={function(){setCalType("lunar")}} className="sans" style={{padding:"8px 20px",fontSize:13,fontWeight:600,background:calType==="lunar"?C.wine:"#fff",color:calType==="lunar"?"#fff":C.sub,border:"none",cursor:"pointer"}}>{String.fromCharCode(20892,21382)}</button>
+        </div>
+        <div style={{display:"flex",gap:10,maxWidth:300,margin:"0 auto",marginBottom:20}}>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(24180)} value={fYear||""} onChange={function(e){setFYear(e.target.value)}} className="sans" style={{flex:2,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26376)} value={fMonth} onChange={function(e){setFMonth(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" placeholder={String.fromCharCode(26085)} value={fDay} onChange={function(e){setFDay(e.target.value)}} className="sans" style={{flex:1,minWidth:0,padding:"14px 8px",borderRadius:14,border:"1px solid "+C.line,fontSize:16,color:C.ink,background:C.warm,textAlign:"center"}}/>
+        </div>
+        <button onClick={doFortune} disabled={!fMonth||!fDay} className="sans" style={{width:"100%",padding:17,borderRadius:18,fontSize:16,fontWeight:700,color:C.ink,background:(fMonth&&fDay)?C.wine:"#ddd",border:"none",cursor:"pointer",boxShadow:(fMonth&&fDay)?"0 8px 28px rgba(44,62,107,.15)":"none"}}>{String.fromCharCode(26597,30475,36816,21183)} {"\uD83C\uDF19"}</button>
+      </div>}
+      {fortuneResult&&<div style={{animation:"fu .5s ease"}}>
+        <div style={{background:"linear-gradient(135deg,rgba(45,52,54,.85),rgba(45,52,54,.75))",borderRadius:24,padding:"36px 24px",color:C.ink,textAlign:"center",position:"relative",overflow:"hidden",marginBottom:16}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"radial-gradient(circle at 50% 30%,rgba(184,151,106,.1),transparent 60%)"}}/>
+          <div className="sans" style={{fontSize:12,color:C.gold,letterSpacing:3,marginBottom:12,position:"relative"}}>{String.fromCharCode(20170,26085,24863,24773,36816,21183)}</div>
+          <div style={{fontSize:32,position:"relative",letterSpacing:6}}>{Array(fortuneResult.stars).fill(null).map(function(_,i){return <span key={i}>{"\u2B50"}</span>})}{Array(5-fortuneResult.stars).fill(null).map(function(_,i){return <span key={i} style={{opacity:.2}}>{"\u2B50"}</span>})}</div>
+          <div className="sans" style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginTop:14,position:"relative"}}>{fortuneResult.kw.map(function(k,i){return <span key={i} style={{padding:"4px 14px",borderRadius:999,background:"rgba(255,255,255,.1)",fontSize:13,color:C.ink+"CC"}}>#{k}</span>})}</div>
+        </div>
+        <div style={{display:"flex",gap:12,marginBottom:16}}>
+          <div style={{flex:1,padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line}}>
+            <div className="sans" style={{fontSize:11,fontWeight:700,color:C.sage,marginBottom:6}}>{String.fromCharCode(23452)}</div>
+            <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.yi}</div>
+          </div>
+          <div style={{flex:1,padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line}}>
+            <div className="sans" style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:6}}>{String.fromCharCode(24524)}</div>
+            <div className="sans" style={{fontSize:13,color:C.ink+"CC",lineHeight:1.7}}>{fortuneResult.ji}</div>
+          </div>
+        </div>
+        <div style={{padding:"18px",background:C.card,borderRadius:18,border:"1px solid "+C.line,marginBottom:12}}><div className="sans" style={{fontSize:11,fontWeight:700,color:C.gold,marginBottom:6}}>{String.fromCharCode(24184,36816,33394)}</div><div className="sans" style={{fontSize:14,color:C.ink+"DD",lineHeight:1.7}}>{fortuneResult.color}</div></div>
+        <div style={{padding:"20px",background:"linear-gradient(135deg,"+C.warm+",#F0E6F6)",borderRadius:18,marginBottom:16}}><div className="sans" style={{fontSize:15,color:C.ink,lineHeight:2,fontWeight:500}}>{"\uD83D\uDCAC "}{fortuneResult.msg}</div></div>
+        <button onClick={function(){setFortuneResult(null)}} className="sans" style={{width:"100%",padding:16,background:C.card,color:C.sub,border:"1px solid "+C.line,borderRadius:16,fontSize:14,fontWeight:600,cursor:"pointer"}}>{String.fromCharCode(20877,26597,19968,27425)} {"\u21BB"}</button>
+      </div>}
+    </div>}
+
+    </div>
+
+    {/* Footer */}
+    <div style={{textAlign:"center",padding:"48px 20px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><div style={{width:24,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:10,color:C.muted,letterSpacing:3}}>YIDU</span><div style={{width:24,height:1,background:"rgba(0,0,0,.06)"}}/></div>
+      <div className="serif" style={{fontSize:14,color:C.muted,fontStyle:"italic"}}>已读 · Yidu</div>
+      <div className="sans" style={{fontSize:11,color:C.muted+"80",marginTop:6}}>不治病，就确诊，其他的你自己决定</div>
+    </div>
+
+    </div>{/* close app-wrap */}
+  </div>;
+}
