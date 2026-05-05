@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
     var response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-      body: JSON.stringify({ model: "qwen-vl-max-latest", max_tokens: 16000, messages: messages, extra_body: { enable_thinking: false } }),
+      body: JSON.stringify({ model: "qwen-vl-max-latest", max_tokens: 16000, messages: messages }),
     });
     var data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: JSON.stringify(data) });
