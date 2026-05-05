@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     var response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-      body: JSON.stringify({ model: "qwen-vl-max-latest", max_tokens: 16000, messages: messages }),
+      body: JSON.stringify({ model: "qwen-vl-max-latest", max_tokens: 16000, messages: messages, enable_thinking: false }),
     });
     var data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: JSON.stringify(data) });
