@@ -1,26 +1,20 @@
 import { useState, useEffect } from "react";
 
 /* ═══ DESIGN SYSTEM ═══ */
-const C = { bg: "#F0F2F5", card: "rgba(255,255,255,.55)", wine: "#2D3436", gold: "#B8860B", plum: "#636E72", sage: "#00B894", rose: "#E17055", ink: "#1A1A2E", sub: "#636E72", muted: "#B2BEC3", line: "rgba(255,255,255,.5)", warm: "rgba(255,255,255,.35)" };
+const C = { bg: "#FAFAF8", card: "#FFFFFF", wine: "#1A1A1A", gold: "#8B7355", plum: "#6B6B6B", sage: "#4A7C59", rose: "#C45B4A", ink: "#1A1A1A", sub: "#8C8C8C", muted: "#BBBBBB", line: "rgba(0,0,0,.06)", warm: "#F5F4F0" };
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#F0F2F5;overflow-x:hidden}
-#parallax-bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;background:radial-gradient(ellipse at 25% 20%,rgba(116,185,255,.12),transparent 50%),radial-gradient(ellipse at 75% 60%,rgba(162,155,254,.1),transparent 50%),radial-gradient(ellipse at 50% 90%,rgba(0,184,148,.08),transparent 50%),radial-gradient(ellipse at 80% 10%,rgba(253,203,110,.08),transparent 40%);transition:transform .1s ease-out}
-.app-wrap{position:relative;z-index:1}
-.glass{background:rgba(255,255,255,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.6);box-shadow:0 8px 32px rgba(31,38,135,.06),inset 0 1px 0 rgba(255,255,255,.8)}
-.glass-strong{background:rgba(255,255,255,.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.7);box-shadow:0 8px 32px rgba(31,38,135,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+body{background:#FAFAF8;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.app-wrap{position:relative}
 @keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes breathe{0%,100%{opacity:.08}50%{opacity:.15}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(184,134,11,.08)}50%{box-shadow:0 0 40px rgba(184,134,11,.15)}}
-@keyframes orbFloat{0%{transform:translate(0,0)}25%{transform:translate(15px,-25px)}50%{transform:translate(-8px,-12px)}75%{transform:translate(-18px,8px)}100%{transform:translate(0,0)}}
-textarea:focus{outline:none}textarea::placeholder{color:${C.muted}}
-.fu{animation:fu .5s ease both}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(139,115,85,.06)}50%{box-shadow:0 0 40px rgba(139,115,85,.12)}}
+textarea:focus{outline:none}textarea::placeholder{color:#CCC}
+.fu{animation:fu .6s cubic-bezier(.4,0,.2,1) both}
 .serif{font-family:'Playfair Display',Georgia,serif}
 .sans{font-family:'DM Sans','PingFang SC','Noto Sans SC',sans-serif}
 `;
@@ -225,7 +219,7 @@ function TCard({type,label,small}) {
     {!small&&<div className="serif" style={{fontSize:12,letterSpacing:6,opacity:.6,marginBottom:12,fontWeight:400,position:"relative",fontStyle:"italic"}}>your attachment style</div>}
     <div className="serif" style={{fontSize:small?22:44,fontWeight:900,marginBottom:small?4:10,position:"relative"}}>{label||t.label}</div>
     <div className="sans" style={{fontSize:small?12:16,opacity:.8,position:"relative",fontWeight:400}}>{t.desc}</div>
-  </div>;
+    </div>
 }
 
 function EntryCard({icon,bg,title,sub,onClick}) {
@@ -238,7 +232,7 @@ function EntryCard({icon,bg,title,sub,onClick}) {
   </button>;
 }
 
-var sec = {marginTop:16,padding:"24px",background:"rgba(255,255,255,.45)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderRadius:20,boxShadow:"0 8px 32px rgba(31,38,135,.06),inset 0 1px 0 rgba(255,255,255,.8)",border:"1px solid rgba(255,255,255,.6)"};
+var sec = {marginTop:20,padding:"24px",background:"#F5F5F7",borderRadius:16,border:"none"};
 
 /* ═══ LOVE ORACLE (月老灵签) ═══ */
 var QIAN = [
@@ -430,96 +424,85 @@ export default function App() {
   </div>}
 
 
-  useEffect(function(){
-    function handleScroll(){
-      var el=document.getElementById("parallax-bg");
-      if(el)el.style.transform="translateY("+window.scrollY*0.3+"px)";
-    }
-    window.addEventListener("scroll",handleScroll,{passive:true});
-    return function(){window.removeEventListener("scroll",handleScroll)};
-  },[]);
 
-  return <div className="sans" style={{minHeight:"100vh",color:C.ink,paddingBottom:80}}>
+  return <div className="sans" style={{minHeight:"100vh",background:"#FAFAF8",paddingBottom:80}}>
     <style>{CSS}</style>
-    <div id="parallax-bg"/>
     <div className="app-wrap">
 
     {/* ═══ HEADER ═══ */}
-    <div style={{padding:"48px 24px 16px",textAlign:"center"}}>
-      <div onClick={goHome} style={{cursor:"pointer"}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 16px",borderRadius:999,background:"rgba(255,255,255,.5)",border:"1px solid rgba(255,255,255,.7)",marginBottom:14}}>
-          <span style={{width:5,height:5,borderRadius:"50%",background:C.gold}}/>
-          <span style={{fontSize:9,letterSpacing:6,color:C.sub,fontWeight:600,textTransform:"uppercase"}} className="sans">attachment analyzer</span>
-        </div>
-        <h1 className="serif" style={{fontSize:52,fontWeight:900,color:C.ink,letterSpacing:8,lineHeight:1}}>已读</h1>
-        <p className="sans" style={{fontSize:12,color:C.sub,marginTop:10,fontWeight:500,letterSpacing:3}}>Ta不是不爱你 — 是你们都有病</p>
+    <div style={{padding:"60px 20px 16px",maxWidth:500,margin:"0 auto"}}>
+      <div onClick={goHome} style={{cursor:"pointer",textAlign:"center"}}>
+        <div className="sans" style={{fontSize:9,color:C.gold,fontWeight:700,letterSpacing:6,marginBottom:14}}>YIDU</div>
+        <h1 className="serif" style={{fontSize:48,fontWeight:900,color:C.ink,letterSpacing:10,lineHeight:1}}>已读</h1>
+        <div style={{width:24,height:1.5,background:C.gold,margin:"14px auto",borderRadius:1}}/>
+        <p className="sans" style={{fontSize:11,color:C.sub,letterSpacing:3}}>Ta不是不爱你 — 是你们都有病</p>
       </div>
-      {pg!=="home"&&<div style={{textAlign:"left",marginTop:16,maxWidth:500,margin:"16px auto 0",paddingLeft:16}}>
-        <span onClick={goHome} className="sans" style={{fontSize:13,color:C.gold,fontWeight:700,cursor:"pointer",display:"inline-block",padding:"6px 0"}}>{"< "}{String.fromCharCode(36820,22238,39318,39029)}</span>
+      {pg!=="home"&&<div style={{marginTop:20}}>
+        <span onClick={goHome} className="sans" style={{fontSize:12,color:C.gold,fontWeight:600,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:6}}>{"←"} {String.fromCharCode(36820,22238)}</span>
       </div>}
     </div>
 
-    <div style={{padding:"0 16px",maxWidth:500,margin:"0 auto"}}>
 
     {/* ═══ HOME ═══ */}
     {pg==="home"&&<div style={{animation:"fu .5s ease"}}>
-      {/* Floating orbs */}
-      <div style={{position:"fixed",top:"15%",left:"10%",width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(116,185,255,.08),transparent)",animation:"orbFloat 15s ease infinite",pointerEvents:"none",zIndex:0}}/>
-      <div style={{position:"fixed",bottom:"20%",right:"5%",width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,rgba(162,155,254,.06),transparent)",animation:"orbFloat 20s ease infinite reverse",pointerEvents:"none",zIndex:0}}/>
 
-      {/* Daily quote glass */}
+      {/* Daily quote */}
       <div className="glass" style={{padding:"24px 26px",borderRadius:20,marginBottom:20}}>
         <div className="serif" style={{fontSize:15,fontWeight:400,color:C.ink+"CC",lineHeight:2,fontStyle:"italic"}}>{"\u201C"}{DAILY}{"\u201D"}</div>
         <div className="sans" style={{fontSize:9,color:C.gold,marginTop:12,fontWeight:700,letterSpacing:4,textTransform:"uppercase"}}>Daily Toxic Quote</div>
       </div>
 
-      {/* BentoGrid */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-        <button onClick={function(){go("quiz")}} className="glass" style={{borderRadius:22,padding:"36px 20px 28px",cursor:"pointer",textAlign:"center",transition:"all .3s",gridRow:"span 2",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
-          <div style={{fontSize:52,marginBottom:20}}>🧪</div>
-          <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink,marginBottom:8}}>依恋类型测试</div>
-          <div className="sans" style={{fontSize:12,color:C.sub}}>24道专业题</div>
-          <div className="sans" style={{fontSize:11,color:C.gold,marginTop:12,fontWeight:600,letterSpacing:2}}>3 MIN</div>
+      {/* Hero: two main features */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+        <button onClick={function(){go("quiz")}} className="glass" style={{borderRadius:22,padding:"36px 18px 28px",cursor:"pointer",textAlign:"center",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(0,0,0,.08)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#B8860B,#D4A76A)"}}/>
+          <div style={{fontSize:44,marginBottom:16}}>🧪</div>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:8}}>依恋类型测试</div>
+          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>24道专业题 · 3min</div>
         </button>
-        <button onClick={function(){go("diagnose")}} className="glass" style={{borderRadius:22,padding:"28px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
-          <div style={{fontSize:36,marginBottom:12}}>🩺</div>
-          <div className="sans" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:4}}>聊天记录确诊</div>
-          <div className="sans" style={{fontSize:11,color:C.sub}}>AI双方分析</div>
-        </button>
-        <button onClick={function(){go("translate")}} className="glass" style={{borderRadius:22,padding:"28px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
-          <div style={{fontSize:36,marginBottom:12}}>🔮</div>
-          <div className="sans" style={{fontSize:15,fontWeight:700,color:C.ink,marginBottom:4}}>翻译潜台词</div>
-          <div className="sans" style={{fontSize:11,color:C.sub}}>Ta到底什么意思</div>
+        <button onClick={function(){go("diagnose")}} className="glass" style={{borderRadius:22,padding:"36px 18px 28px",cursor:"pointer",textAlign:"center",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(0,0,0,.08)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#2D3436,#636E72)"}}/>
+          <div style={{fontSize:44,marginBottom:16}}>🩺</div>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:C.ink,marginBottom:8}}>聊天记录确诊</div>
+          <div className="sans" style={{fontSize:12,color:C.sub,lineHeight:1.6}}>AI分析双方类型</div>
         </button>
       </div>
 
-      {/* Row 2 */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-        {[{id:"check",icon:"💊",l:"发不发",s:"拦住冲动"},{id:"predict",icon:"🔭",l:"预测",s:"感情走向"},{id:"tarot",icon:"🌙",l:"塔罗",s:"抽三张牌"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} className="glass" style={{borderRadius:18,padding:"22px 10px 18px",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
-          <div style={{fontSize:28,marginBottom:8}}>{t.icon}</div>
-          <div className="sans" style={{fontSize:13,fontWeight:700,color:C.ink}}>{t.l}</div>
-          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:4}}>{t.s}</div>
+      {/* Second row: 3 tools */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:18}}>
+        {[{id:"translate",icon:"🔮",l:"翻译",s:"潜台词解码",bar:"#636E72"},{id:"check",icon:"💊",l:"发不发",s:"拦住冲动",bar:"#00B894"},{id:"predict",icon:"🔭",l:"预测",s:"感情走向",bar:"#E17055"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} className="glass" style={{borderRadius:18,padding:"26px 10px 20px",cursor:"pointer",textAlign:"center",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(0,0,0,.06)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:t.bar}}/>
+          <div style={{fontSize:32,marginBottom:10}}>{t.icon}</div>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink}}>{t.l}</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:5,letterSpacing:1}}>{t.s}</div>
         </button>})}
       </div>
 
-      {/* Mystical */}
-      <div className="glass-strong" style={{borderRadius:22,padding:"24px",marginBottom:12}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-          <div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/>
-          <span className="sans" style={{fontSize:9,color:C.gold,letterSpacing:5,textTransform:"uppercase",fontWeight:700}}>Mystical</span>
-          <div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/>
+      {/* Tarot banner */}
+      <button onClick={function(){go("tarot")}} style={{width:"100%",background:"linear-gradient(135deg,#1A1A2E,#2D3436)",borderRadius:22,padding:"28px 24px",border:"none",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:20,marginBottom:24,position:"relative",overflow:"hidden",boxShadow:"0 8px 36px rgba(0,0,0,.12)",transition:"all .25s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none"}}>
+        <div style={{position:"absolute",top:-30,right:-30,width:140,height:140,borderRadius:"50%",background:"radial-gradient(circle,rgba(184,134,11,.12),transparent)"}}/>
+        <div style={{width:56,height:56,borderRadius:16,background:"rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,animation:"float 4s ease infinite"}}>🌙</div>
+        <div style={{flex:1}}>
+          <div className="serif" style={{fontSize:18,fontWeight:700,color:"#fff",marginBottom:4}}>塔罗牌占卜</div>
+          <div className="sans" style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>22张大阿尔卡纳 · 凭直觉抽牌</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-          {[{id:"qian",icon:"\uD83C\uDFEE",l:"月老灵签"},{id:"bazi",icon:"\uD83D\uDCAB",l:"八字速配"},{id:"fortune",icon:"\uD83C\uDF19",l:"今日运势"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} style={{background:"rgba(255,255,255,.4)",borderRadius:14,padding:"20px 8px 16px",border:"1px solid rgba(255,255,255,.06)",cursor:"pointer",textAlign:"center",transition:"all .3s"}} onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,.08)"}} onMouseLeave={function(e){e.currentTarget.style.background="rgba(255,255,255,.04)"}}>
-            <div style={{fontSize:28,marginBottom:8}}>{t.icon}</div>
-            <div className="sans" style={{fontSize:12,fontWeight:700,color:C.ink+"CC"}}>{t.l}</div>
-          </button>})}
-        </div>
+        <div style={{width:32,height:32,borderRadius:10,background:"rgba(184,134,11,.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#B8860B",fontSize:16}}>›</div>
+      </button>
+
+      {/* Mystical section */}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:10,color:C.gold,letterSpacing:4,textTransform:"uppercase",fontWeight:600}}>Mystical</span><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:28}}>
+        {[{id:"qian",icon:"\uD83C\uDFEE",l:"月老灵签",s:"求一支签",bar:"#E17055"},{id:"bazi",icon:"\uD83D\uDCAB",l:"八字速配",s:"缘分几何",bar:"#B8860B"},{id:"fortune",icon:"\uD83C\uDF19",l:"今日运势",s:"感情天气",bar:"#636E72"}].map(function(t){return <button key={t.id} onClick={function(){go(t.id)}} className="glass" style={{borderRadius:18,padding:"26px 10px 20px",cursor:"pointer",textAlign:"center",transition:"all .25s",position:"relative",overflow:"hidden"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(0,0,0,.06)"}} onMouseLeave={function(e){e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:t.bar}}/>
+          <div style={{fontSize:32,marginBottom:10}}>{t.icon}</div>
+          <div className="sans" style={{fontSize:14,fontWeight:700,color:C.ink}}>{t.l}</div>
+          <div className="sans" style={{fontSize:10,color:C.muted,marginTop:5,letterSpacing:1}}>{t.s}</div>
+        </button>})}
       </div>
 
-      {/* Types */}
+      {/* Type grid */}
       <div>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,marginTop:8}}><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:9,color:C.muted,letterSpacing:5,textTransform:"uppercase",fontWeight:600}}>Attachment Styles</span><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/></div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:10,color:C.muted,letterSpacing:4,textTransform:"uppercase",fontWeight:600}}>Attachment Styles</span><div style={{flex:1,height:1,background:"rgba(0,0,0,.06)"}}/></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {Object.keys(TI).map(function(k){return <div key={k} className="glass" style={{padding:"18px",borderRadius:18}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
@@ -544,7 +527,7 @@ export default function App() {
       <div style={{height:3,background:C.line,borderRadius:99,overflow:"hidden",marginBottom:24}}>
         <div style={{height:"100%",width:((qi+1)/QUIZ.length)*100+"%",background:"linear-gradient(90deg,"+C.gold+","+C.wine+")",borderRadius:99,transition:"width .3s"}}/>
       </div>
-      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 20px rgba(45,42,50,.04)",border:"1px solid "+C.line}}>
+      <div style={{background:C.card,borderRadius:24,padding:28,boxShadow:"0 2px 20px rgba(0,0,0,.04)",border:"1px solid "+C.line}}>
         <div className="serif" style={{fontSize:20,fontWeight:700,color:C.ink,marginBottom:24,lineHeight:1.6}}>{QUIZ[qi].q}</div>
         {QUIZ[qi].a.map(function(a,i){var on=pk===i;return <button key={i} onClick={function(){ansQ(i)}} style={{width:"100%",padding:"16px 20px",marginBottom:10,borderRadius:16,border:on?"2px solid "+C.gold:"2px solid "+C.line,background:on?C.gold+"12":C.bg,color:on?C.gold:C.ink,fontSize:14,fontWeight:500,textAlign:"left",cursor:"pointer",lineHeight:1.6,transition:"all .15s"}} className="sans">
           <span style={{display:"inline-flex",width:24,height:24,borderRadius:8,background:on?C.gold:C.muted+"40",color:on?"#fff":C.sub,alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,marginRight:12,verticalAlign:"middle"}}>{String.fromCharCode(65+i)}</span>{a}
@@ -617,7 +600,8 @@ export default function App() {
                   <div className="sans" style={{fontSize:10,color:C.sub}}>已选择</div>
                 </div>}
               </div>
-            </div>;
+              </div>
+);
           })}
         </div>
       </div>}
@@ -960,12 +944,12 @@ export default function App() {
     </div>
 
     {/* Footer */}
-    <div style={{textAlign:"center",padding:"48px 20px 24px"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:8}}><div style={{width:24,height:1,background:"rgba(0,0,0,.06)"}}/><span className="sans" style={{fontSize:10,color:C.muted,letterSpacing:3}}>YIDU</span><div style={{width:24,height:1,background:"rgba(0,0,0,.06)"}}/></div>
-      <div className="serif" style={{fontSize:14,color:C.muted,fontStyle:"italic"}}>已读 · Yidu</div>
-      <div className="sans" style={{fontSize:11,color:C.muted+"80",marginTop:6}}>不治病，就确诊，其他的你自己决定</div>
+    <div style={{textAlign:"center",padding:"60px 20px 32px"}}>
+      <div className="sans" style={{fontSize:10,color:"#CCC",letterSpacing:4}}>YIDU</div>
     </div>
 
+    </div>{/* close content */}
     </div>{/* close app-wrap */}
-  </div>;
+    </div>
+);
 }
