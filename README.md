@@ -1,16 +1,99 @@
-# React + Vite
+# 已读 Yidu
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Ta不是不爱你 — 是你们都有病
 
-Currently, two official plugins are available:
+AI-powered relationship & attachment style analysis tool.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Live**: [yidu.click](https://yidu.click)
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- 🧪 **Attachment Style Quiz** — 24 questions, brutally honest results
+- 🩺 **Chat Diagnosis** — Upload chat logs/screenshots for AI analysis
+- 🔮 **Subtext Decoder** — What they *really* mean
+- 💊 **Send or Not** — Should you send that message?
+- 🔭 **Prediction** — Where is this relationship going?
+- 🌙 **Tarot** — Three-card love reading
+- 🏮 **Love Oracle** — Traditional fortune sticks
+- 💫 **Zodiac Match** — Birthday compatibility
+- 🌙 **Daily Fortune** — Today's love energy
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Frontend**: React 19 + Vite 8 + Tailwind CSS v4 + React Router
+- **Backend**: Vercel Serverless Functions
+- **AI**: Multi-provider adapter (Qwen / Claude / OpenAI)
+- **i18n**: react-i18next (Chinese + English)
+- **Deploy**: Vercel
+
+## Project Structure
+
+```
+src/
+├── App.jsx                 # Router config
+├── main.jsx                # Entry point
+├── app.css                 # Tailwind + custom animations
+├── components/
+│   ├── Layout.jsx          # Header, footer, lang toggle
+│   ├── Shared.jsx          # TCard, ShareBar, LoadingSkeleton
+│   └── AIInput.jsx         # Image upload, type selector
+├── pages/
+│   ├── Home.jsx            # Landing page
+│   ├── Quiz.jsx            # Attachment style quiz
+│   ├── Diagnose.jsx        # Chat diagnosis (AI)
+│   ├── Translate.jsx       # Subtext decoder (AI)
+│   ├── Check.jsx           # Send-or-not checker (AI)
+│   ├── Predict.jsx         # Relationship predictor (AI)
+│   ├── Tarot.jsx           # Tarot card reading
+│   ├── Qian.jsx            # Love oracle sticks
+│   ├── Bazi.jsx            # Birthday compatibility
+│   ├── Fortune.jsx         # Daily fortune
+│   ├── Privacy.jsx         # Privacy policy
+│   └── NotFound.jsx        # 404 page
+├── data/                   # Pure data + calculation logic
+│   ├── colors.js           # Design tokens
+│   ├── quiz.js             # Quiz questions + type definitions
+│   ├── quotes.js           # Daily quotes
+│   ├── tarot.js            # Tarot cards + synthesis
+│   ├── qian.js             # Oracle fortune sticks
+│   ├── bazi.js             # Bazi compatibility calc
+│   ├── fortune.js          # Daily fortune calc
+│   └── prompts.js          # AI system prompts
+├── hooks/
+│   └── useAI.js            # AI call state management
+├── lib/
+│   └── api.js              # API client with retry logic
+└── i18n/
+    ├── index.js            # i18next config
+    ├── zh.json             # Chinese UI strings
+    └── en.json             # English UI strings
+api/
+└── chat.js                 # Serverless: Qwen / Claude / OpenAI adapter
+```
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Environment Variables (Vercel)
+
+| Variable | Description | Example |
+|---|---|---|
+| `AI_PROVIDER` | AI backend: `qwen`, `claude`, or `openai` | `qwen` |
+| `ANTHROPIC_API_KEY` | API key for the chosen provider | `sk-...` |
+| `API_BASE_URL` | Custom API endpoint (optional) | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `AI_MODEL` | Model name override (optional) | `qwen-vl-max-latest` |
+
+### For overseas deployment:
+```
+AI_PROVIDER=claude
+ANTHROPIC_API_KEY=sk-ant-...
+AI_MODEL=claude-sonnet-4-20250514
+```
+
+## License
+
+MIT
