@@ -10,6 +10,8 @@ import Tarot from "./pages/Tarot";
 import Qian from "./pages/Qian";
 import Bazi from "./pages/Bazi";
 import Fortune from "./pages/Fortune";
+import Elements from "./pages/Elements";
+import ZodiacMatch from "./pages/ZodiacMatch";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="qian" element={<Qian />} />
           <Route path="bazi" element={<Bazi />} />
           <Route path="fortune" element={<Fortune />} />
+          <Route path="elements" element={<Elements />} />
+          <Route path="zodiac" element={<ZodiacMatch />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="*" element={<NotFound />} />
         </Route>

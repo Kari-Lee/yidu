@@ -95,6 +95,30 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Chinese Mysticism - overseas features */}
+      <div className="rounded-3xl p-6 mb-6" style={{ background: "#0A0A0C", boxShadow: "0 4px 24px rgba(0,0,0,.1)" }}>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-[3px] h-4 rounded-sm" style={{ background: "#A08050" }} />
+          <span className="text-[11px] font-bold tracking-[4px] uppercase" style={{ color: "#A08050" }}>Chinese Mysticism</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { path: "/elements", icon: "🌿", l: "Five Elements", desc: "Wood · Fire · Earth · Metal · Water", gradient: "linear-gradient(135deg, #1A2F22, #111114)" },
+            { path: "/zodiac", icon: "🐉", l: "Zodiac Match", desc: "12 animals · toxic or soulmate?", gradient: "linear-gradient(135deg, #1A0D0D, #111114)" },
+          ].map((item) => (
+            <button key={item.path} onClick={() => navigate(item.path)}
+              className="rounded-2xl pt-5 pb-4 px-3 border-none cursor-pointer text-left transition-all"
+              style={{ background: item.gradient, border: "1px solid #1E1E22" }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}>
+              <div className="text-[32px] mb-2">{item.icon}</div>
+              <div className="text-[14px] font-bold mb-1" style={{ color: "#E8E4DC" }}>{item.l}</div>
+              <div className="text-[10px]" style={{ color: "#555" }}>{item.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Attachment styles info */}
       <div className="bg-white rounded-3xl p-6" style={{ boxShadow: "0 4px 24px rgba(0,0,0,.04)" }}>
         <div className="text-[11px] tracking-[4px] uppercase font-semibold mb-4" style={{ color: C.sub }}>{t("home.styles")}</div>

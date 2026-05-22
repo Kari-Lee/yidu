@@ -10,5 +10,7 @@
   <url><loc>https://yidu.click/qian</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://yidu.click/bazi</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://yidu.click/fortune</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://yidu.click/elements</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://yidu.click/zodiac</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://yidu.click/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
