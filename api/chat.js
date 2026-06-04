@@ -1,3 +1,19 @@
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT = 5;
+const MAX_MESSAGE_CHARS = 12000;
+const MAX_SYSTEM_CHARS = 6000;
+const MAX_IMAGES = 8;
+const MAX_IMAGE_BASE64_CHARS = 2.5 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BASE64_CHARS = 9.5 * 1024 * 1024;
+const rateBuckets = new Map();
+
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -9,9 +25,12 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
   const provider = process.env.AI_PROVIDER || "qwen";
+  const startedAt = Date.now();
+  const ip = getClientIp(req);
 
   try {
-    const body = req.body;
+    enforceRateLimit(ip);
+    const body = validateBody(req.body || {});
     let text = "";
 
     if (provider === "claude") {
@@ -22,10 +41,96 @@ export default async function handler(req, res) {
       text = await callQwen(apiKey, body, process.env.API_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1");
     }
 
+    logRequest("ok", { ip, provider, body, startedAt });
     return res.status(200).json({ text });
   } catch (err) {
-    return res.status(500).json({ error: err.message || "Internal error" });
+    const status = err.status || 500;
+    logRequest("error", { ip, provider, body: req.body || {}, startedAt, error: err.message, status });
+    return res.status(status).json({ error: err.message || "Internal error" });
   }
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded) return forwarded.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
+function enforceRateLimit(ip) {
+  const now = Date.now();
+  pruneRateBuckets(now);
+  const bucket = rateBuckets.get(ip) || { count: 0, resetAt: now + RATE_WINDOW_MS };
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + RATE_WINDOW_MS;
+  }
+  bucket.count += 1;
+  rateBuckets.set(ip, bucket);
+  if (bucket.count > RATE_LIMIT) throw new HttpError(429, "分析太频繁了，稍等一下再试");
+}
+
+function pruneRateBuckets(now) {
+  for (const [ip, bucket] of rateBuckets.entries()) {
+    if (now > bucket.resetAt + RATE_WINDOW_MS) rateBuckets.delete(ip);
+  }
+}
+
+function validateBody(body) {
+  const system = typeof body.system === "string" ? body.system : "";
+  const message = typeof body.message === "string" ? body.message : "";
+  const images = Array.isArray(body.images) ? body.images : [];
+
+  if (!message.trim() && images.length === 0) throw new HttpError(400, "请输入聊天内容或上传截图");
+  if (system.length > MAX_SYSTEM_CHARS) throw new HttpError(413, "系统提示太长");
+  if (message.length > MAX_MESSAGE_CHARS) throw new HttpError(413, "聊天内容太长，请删减后再试");
+  if (images.length > MAX_IMAGES) throw new HttpError(413, "截图太多了，最多上传8张");
+
+  let totalImageChars = 0;
+  const cleanImages = images.map((img) => {
+    if (typeof img !== "string") throw new HttpError(400, "图片格式异常");
+    const clean = stripDataUrl(img);
+    if (!isLikelyBase64(clean)) throw new HttpError(400, "图片格式异常");
+    if (clean.length > MAX_IMAGE_BASE64_CHARS) throw new HttpError(413, "单张截图太大，请裁剪后再试");
+    totalImageChars += clean.length;
+    return clean;
+  });
+  if (totalImageChars > MAX_TOTAL_IMAGE_BASE64_CHARS) throw new HttpError(413, "截图总大小太大，请少传几张");
+
+  return { system, message, images: cleanImages };
+}
+
+function stripDataUrl(value) {
+  const marker = "base64,";
+  const idx = value.indexOf(marker);
+  const raw = idx === -1 ? value : value.slice(idx + marker.length);
+  return raw.replace(/\s/g, "");
+}
+
+function isLikelyBase64(value) {
+  return value.length > 0 && /^[A-Za-z0-9+/=\s_-]+$/.test(value);
+}
+
+function logRequest(level, data) {
+  const body = data.body || {};
+  const images = Array.isArray(body.images) ? body.images : [];
+  console[level === "ok" ? "log" : "warn"]("[chat]", JSON.stringify({
+    level,
+    ip: maskIp(data.ip),
+    provider: data.provider,
+    status: data.status || 200,
+    durationMs: Date.now() - data.startedAt,
+    messageChars: typeof body.message === "string" ? body.message.length : 0,
+    imageCount: images.length,
+    imageChars: images.reduce((sum, img) => sum + (typeof img === "string" ? img.length : 0), 0),
+    error: data.error || undefined,
+  }));
+}
+
+function maskIp(ip) {
+  if (!ip || ip === "unknown") return "unknown";
+  if (ip.includes(".")) return ip.split(".").slice(0, 3).concat("x").join(".");
+  if (ip.includes(":")) return ip.split(":").slice(0, 3).concat("x").join(":");
+  return "masked";
 }
 
 async function callQwen(apiKey, body, baseUrl) {
