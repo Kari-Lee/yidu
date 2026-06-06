@@ -1,4 +1,10 @@
 {
+  "regions": ["hkg1"],
+  "functions": {
+    "api/chat.js": {
+      "maxDuration": 120
+    }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/((?!api).*)", "destination": "/index.html" }

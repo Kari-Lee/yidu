@@ -7,8 +7,9 @@ const MAX_SYSTEM_CHARS = 6000;
 const MAX_IMAGES = 12;
 const MAX_IMAGE_BASE64_CHARS = 2 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BASE64_CHARS = 3.9 * 1024 * 1024;
-const UPSTREAM_TIMEOUT_MS = 55 * 1000;
-const MAX_OUTPUT_TOKENS = 1800;
+const UPSTREAM_TIMEOUT_MS = 100 * 1000;
+const MAX_OUTPUT_TOKENS = 1100;
+const VISION_MAX_PIXELS = 1600 * 960;
 const rateBuckets = new Map();
 
 class HttpError extends Error {
@@ -116,7 +117,27 @@ function validateBody(body) {
     }
   }
 
-  return { system, message, images: cleanImages, imageKeys };
+  return {
+    system,
+    message,
+    images: cleanImages,
+    imageKeys,
+    clientMeta: normalizeClientMeta(body.clientMeta),
+  };
+}
+
+function normalizeClientMeta(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return {
+    imageTransport: cleanMetaValue(value.imageTransport, 32),
+    uploadFallbackCode: cleanMetaValue(value.uploadFallbackCode, 48),
+    uploadFallbackDetail: cleanMetaValue(value.uploadFallbackDetail, 180),
+  };
+}
+
+function cleanMetaValue(value, maxLength) {
+  if (typeof value !== "string") return "";
+  return value.replace(/[\r\n]+/g, " ").slice(0, maxLength);
 }
 
 function stripDataUrl(value) {
@@ -143,6 +164,9 @@ function logRequest(level, data) {
     imageCount: images.length,
     imageKeyCount: Array.isArray(body.imageKeys) ? body.imageKeys.length : 0,
     imageChars: images.reduce((sum, img) => sum + (typeof img === "string" ? img.length : 0), 0),
+    imageTransport: body.clientMeta?.imageTransport || undefined,
+    uploadFallbackCode: body.clientMeta?.uploadFallbackCode || undefined,
+    uploadFallbackDetail: body.clientMeta?.uploadFallbackDetail || undefined,
     error: data.error || undefined,
   }));
 }
@@ -160,8 +184,16 @@ async function callQwen(apiKey, body, baseUrl) {
   if (body.system) messages.push({ role: "system", content: body.system });
   if (body.images?.length > 0 || imageUrls.length > 0) {
     const userContent = [{ type: "text", text: body.message || "请仔细分析这些聊天记录截图中的对话内容" }];
-    body.images.forEach((img) => userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img } }));
-    imageUrls.forEach((url) => userContent.push({ type: "image_url", image_url: { url } }));
+    body.images.forEach((img) => userContent.push({
+      type: "image_url",
+      image_url: { url: "data:image/jpeg;base64," + img },
+      max_pixels: VISION_MAX_PIXELS,
+    }));
+    imageUrls.forEach((url) => userContent.push({
+      type: "image_url",
+      image_url: { url },
+      max_pixels: VISION_MAX_PIXELS,
+    }));
     messages.push({ role: "user", content: userContent });
   } else {
     messages.push({ role: "user", content: body.message });
