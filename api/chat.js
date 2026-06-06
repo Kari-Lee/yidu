@@ -1,10 +1,12 @@
 const RATE_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT = 5;
+const RATE_LIMIT = 10;
 const MAX_MESSAGE_CHARS = 12000;
 const MAX_SYSTEM_CHARS = 6000;
 const MAX_IMAGES = 8;
-const MAX_IMAGE_BASE64_CHARS = 2.5 * 1024 * 1024;
-const MAX_TOTAL_IMAGE_BASE64_CHARS = 9.5 * 1024 * 1024;
+const MAX_IMAGE_BASE64_CHARS = 2 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BASE64_CHARS = 3.9 * 1024 * 1024;
+const UPSTREAM_TIMEOUT_MS = 55 * 1000;
+const MAX_OUTPUT_TOKENS = 2500;
 const rateBuckets = new Map();
 
 class HttpError extends Error {
@@ -21,7 +23,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
   const provider = process.env.AI_PROVIDER || "qwen";
@@ -144,13 +146,18 @@ async function callQwen(apiKey, body, baseUrl) {
     messages.push({ role: "user", content: body.message });
   }
 
-  const response = await fetch(baseUrl + "/chat/completions", {
+  const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-    body: JSON.stringify({ model: process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23", max_tokens: 16000, messages, enable_thinking: false }),
+    body: JSON.stringify({
+      model: process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23",
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages,
+      enable_thinking: false,
+    }),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(JSON.stringify(data));
+  const data = await readJson(response);
+  if (!response.ok) throw upstreamError(response.status, data);
   return data.choices?.[0]?.message?.content || "";
 }
 
@@ -164,7 +171,7 @@ async function callClaude(apiKey, body) {
     messages.push({ role: "user", content: body.message });
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -173,13 +180,13 @@ async function callClaude(apiKey, body) {
     },
     body: JSON.stringify({
       model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
-      max_tokens: 16000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       system: body.system || "",
       messages,
     }),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(JSON.stringify(data));
+  const data = await readJson(response);
+  if (!response.ok) throw upstreamError(response.status, data);
   return data.content?.map((c) => c.text || "").join("") || "";
 }
 
@@ -194,12 +201,45 @@ async function callOpenAI(apiKey, body, baseUrl) {
     messages.push({ role: "user", content: body.message });
   }
 
-  const response = await fetch(baseUrl + "/chat/completions", {
+  const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-    body: JSON.stringify({ model: process.env.AI_MODEL || "gpt-4o", max_tokens: 16000, messages }),
+    body: JSON.stringify({ model: process.env.AI_MODEL || "gpt-4o", max_tokens: MAX_OUTPUT_TOKENS, messages }),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(JSON.stringify(data));
+  const data = await readJson(response);
+  if (!response.ok) throw upstreamError(response.status, data);
   return data.choices?.[0]?.message?.content || "";
+}
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      throw new HttpError(504, "AI分析超时，请减少截图数量后重试");
+    }
+    throw new HttpError(502, "AI服务连接失败，请稍后重试");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function upstreamError(status, data) {
+  if (status === 429) return new HttpError(429, "AI服务繁忙，请稍等一下再试");
+  if (status === 413) return new HttpError(413, "截图太大，请减少截图后重试");
+  const detail = data?.error?.message || data?.message || "";
+  console.warn("[chat-upstream]", JSON.stringify({ status, detail: String(detail).slice(0, 500) }));
+  return new HttpError(502, "AI服务暂时不稳定，请稍后重试");
 }
