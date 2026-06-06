@@ -83,9 +83,12 @@ npm run dev
 | Variable | Description | Example |
 |---|---|---|
 | `AI_PROVIDER` | AI backend: `qwen`, `claude`, or `openai` | `qwen` |
-| `ANTHROPIC_API_KEY` | API key for the chosen provider | `sk-...` |
+| `QWEN_API_KEY` | DashScope API key (recommended for Qwen) | `sk-...` |
+| `ANTHROPIC_API_KEY` | Claude API key or legacy provider key | `sk-...` |
 | `API_BASE_URL` | Custom API endpoint (optional) | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `AI_MODEL` | Model name override (optional) | `qwen-vl-max-latest` |
+| `AI_TEXT_MODEL` | Text analysis model override (optional) | `qwen3-vl-plus-2025-09-23` |
+| `AI_VISION_MODEL` | Screenshot analysis model override (optional) | `qwen3-vl-flash` |
+| `AI_MODEL` | Legacy model override for text requests | `qwen3-vl-plus-2025-09-23` |
 
 ### For overseas deployment:
 ```

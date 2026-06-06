@@ -2,11 +2,11 @@ const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 10;
 const MAX_MESSAGE_CHARS = 12000;
 const MAX_SYSTEM_CHARS = 6000;
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 12;
 const MAX_IMAGE_BASE64_CHARS = 2 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BASE64_CHARS = 3.9 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 55 * 1000;
-const MAX_OUTPUT_TOKENS = 2500;
+const MAX_OUTPUT_TOKENS = 1800;
 const rateBuckets = new Map();
 
 class HttpError extends Error {
@@ -85,18 +85,18 @@ function validateBody(body) {
   if (!message.trim() && images.length === 0) throw new HttpError(400, "请输入聊天内容或上传截图");
   if (system.length > MAX_SYSTEM_CHARS) throw new HttpError(413, "系统提示太长");
   if (message.length > MAX_MESSAGE_CHARS) throw new HttpError(413, "聊天内容太长，请删减后再试");
-  if (images.length > MAX_IMAGES) throw new HttpError(413, "截图太多了，最多上传8张");
+  if (images.length > MAX_IMAGES) throw new HttpError(413, "本次截图数量异常，请重新选择");
 
   let totalImageChars = 0;
   const cleanImages = images.map((img) => {
     if (typeof img !== "string") throw new HttpError(400, "图片格式异常");
     const clean = stripDataUrl(img);
     if (!isLikelyBase64(clean)) throw new HttpError(400, "图片格式异常");
-    if (clean.length > MAX_IMAGE_BASE64_CHARS) throw new HttpError(413, "单张截图太大，请裁剪后再试");
+    if (clean.length > MAX_IMAGE_BASE64_CHARS) throw new HttpError(413, "截图优化没有完成，请重新提交");
     totalImageChars += clean.length;
     return clean;
   });
-  if (totalImageChars > MAX_TOTAL_IMAGE_BASE64_CHARS) throw new HttpError(413, "截图总大小太大，请少传几张");
+  if (totalImageChars > MAX_TOTAL_IMAGE_BASE64_CHARS) throw new HttpError(413, "截图优化没有完成，请重新提交");
 
   return { system, message, images: cleanImages };
 }
@@ -146,11 +146,14 @@ async function callQwen(apiKey, body, baseUrl) {
     messages.push({ role: "user", content: body.message });
   }
 
+  const model = body.images?.length > 0
+    ? (process.env.AI_VISION_MODEL || "qwen3-vl-flash")
+    : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
     body: JSON.stringify({
-      model: process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23",
+      model,
       max_tokens: MAX_OUTPUT_TOKENS,
       messages,
       enable_thinking: false,
@@ -218,7 +221,7 @@ async function fetchWithTimeout(url, options) {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err?.name === "AbortError") {
-      throw new HttpError(504, "AI分析超时，请减少截图数量后重试");
+      throw new HttpError(504, "这次分析超时了，请直接重试");
     }
     throw new HttpError(502, "AI服务连接失败，请稍后重试");
   } finally {
@@ -238,7 +241,7 @@ async function readJson(response) {
 
 function upstreamError(status, data) {
   if (status === 429) return new HttpError(429, "AI服务繁忙，请稍等一下再试");
-  if (status === 413) return new HttpError(413, "截图太大，请减少截图后重试");
+  if (status === 413) return new HttpError(413, "截图优化没有完成，请重新提交");
   const detail = data?.error?.message || data?.message || "";
   console.warn("[chat-upstream]", JSON.stringify({ status, detail: String(detail).slice(0, 500) }));
   return new HttpError(502, "AI服务暂时不稳定，请稍后重试");
