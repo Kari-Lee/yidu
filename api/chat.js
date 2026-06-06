@@ -1,3 +1,5 @@
+import { getOssConfig, signObjectReadUrl, validateObjectKeys } from "../server/oss.js";
+
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 10;
 const MAX_MESSAGE_CHARS = 12000;
@@ -81,11 +83,16 @@ function validateBody(body) {
   const system = typeof body.system === "string" ? body.system : "";
   const message = typeof body.message === "string" ? body.message : "";
   const images = Array.isArray(body.images) ? body.images : [];
+  const rawImageKeys = Array.isArray(body.imageKeys) ? body.imageKeys : [];
 
-  if (!message.trim() && images.length === 0) throw new HttpError(400, "请输入聊天内容或上传截图");
+  if (!message.trim() && images.length === 0 && rawImageKeys.length === 0) {
+    throw new HttpError(400, "请输入聊天内容或上传截图");
+  }
   if (system.length > MAX_SYSTEM_CHARS) throw new HttpError(413, "系统提示太长");
   if (message.length > MAX_MESSAGE_CHARS) throw new HttpError(413, "聊天内容太长，请删减后再试");
-  if (images.length > MAX_IMAGES) throw new HttpError(413, "本次截图数量异常，请重新选择");
+  if (images.length + rawImageKeys.length > MAX_IMAGES) {
+    throw new HttpError(413, "本次截图数量异常，请重新选择");
+  }
 
   let totalImageChars = 0;
   const cleanImages = images.map((img) => {
@@ -98,7 +105,18 @@ function validateBody(body) {
   });
   if (totalImageChars > MAX_TOTAL_IMAGE_BASE64_CHARS) throw new HttpError(413, "截图优化没有完成，请重新提交");
 
-  return { system, message, images: cleanImages };
+  let imageKeys = [];
+  if (rawImageKeys.length) {
+    const ossConfig = getOssConfig();
+    if (!ossConfig) throw new HttpError(503, "图片服务暂时不可用，请稍后重试");
+    try {
+      imageKeys = validateObjectKeys(rawImageKeys, ossConfig, MAX_IMAGES);
+    } catch (err) {
+      throw new HttpError(400, err.message || "截图地址异常");
+    }
+  }
+
+  return { system, message, images: cleanImages, imageKeys };
 }
 
 function stripDataUrl(value) {
@@ -123,6 +141,7 @@ function logRequest(level, data) {
     durationMs: Date.now() - data.startedAt,
     messageChars: typeof body.message === "string" ? body.message.length : 0,
     imageCount: images.length,
+    imageKeyCount: Array.isArray(body.imageKeys) ? body.imageKeys.length : 0,
     imageChars: images.reduce((sum, img) => sum + (typeof img === "string" ? img.length : 0), 0),
     error: data.error || undefined,
   }));
@@ -137,16 +156,18 @@ function maskIp(ip) {
 
 async function callQwen(apiKey, body, baseUrl) {
   const messages = [];
+  const imageUrls = getSignedImageUrls(body);
   if (body.system) messages.push({ role: "system", content: body.system });
-  if (body.images?.length > 0) {
+  if (body.images?.length > 0 || imageUrls.length > 0) {
     const userContent = [{ type: "text", text: body.message || "请仔细分析这些聊天记录截图中的对话内容" }];
     body.images.forEach((img) => userContent.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img } }));
+    imageUrls.forEach((url) => userContent.push({ type: "image_url", image_url: { url } }));
     messages.push({ role: "user", content: userContent });
   } else {
     messages.push({ role: "user", content: body.message });
   }
 
-  const model = body.images?.length > 0
+  const model = body.images?.length > 0 || imageUrls.length > 0
     ? (process.env.AI_VISION_MODEL || "qwen3-vl-flash")
     : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
@@ -165,6 +186,9 @@ async function callQwen(apiKey, body, baseUrl) {
 }
 
 async function callClaude(apiKey, body) {
+  if (body.imageKeys?.length) {
+    throw new HttpError(503, "当前图片服务配置不支持 Claude");
+  }
   const messages = [];
   if (body.images?.length > 0) {
     const content = [{ type: "text", text: body.message || "Please analyze these chat screenshots" }];
@@ -195,10 +219,12 @@ async function callClaude(apiKey, body) {
 
 async function callOpenAI(apiKey, body, baseUrl) {
   const messages = [];
+  const imageUrls = getSignedImageUrls(body);
   if (body.system) messages.push({ role: "system", content: body.system });
-  if (body.images?.length > 0) {
+  if (body.images?.length > 0 || imageUrls.length > 0) {
     const content = [{ type: "text", text: body.message || "Please analyze these chat screenshots" }];
     body.images.forEach((img) => content.push({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + img } }));
+    imageUrls.forEach((url) => content.push({ type: "image_url", image_url: { url } }));
     messages.push({ role: "user", content });
   } else {
     messages.push({ role: "user", content: body.message });
@@ -212,6 +238,13 @@ async function callOpenAI(apiKey, body, baseUrl) {
   const data = await readJson(response);
   if (!response.ok) throw upstreamError(response.status, data);
   return data.choices?.[0]?.message?.content || "";
+}
+
+function getSignedImageUrls(body) {
+  if (!body.imageKeys?.length) return [];
+  const config = getOssConfig();
+  if (!config) throw new HttpError(503, "图片服务暂时不可用，请稍后重试");
+  return body.imageKeys.map((key) => signObjectReadUrl(config, key));
 }
 
 async function fetchWithTimeout(url, options) {

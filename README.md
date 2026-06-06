@@ -89,6 +89,16 @@ npm run dev
 | `AI_TEXT_MODEL` | Text analysis model override (optional) | `qwen3-vl-plus-2025-09-23` |
 | `AI_VISION_MODEL` | Screenshot analysis model override (optional) | `qwen3-vl-flash` |
 | `AI_MODEL` | Legacy model override for text requests | `qwen3-vl-plus-2025-09-23` |
+| `OSS_ACCESS_KEY_ID` | RAM user AccessKey ID for temporary screenshot objects | `LTAI...` |
+| `OSS_ACCESS_KEY_SECRET` | RAM user AccessKey Secret | `...` |
+| `OSS_BUCKET` | Private OSS bucket name | `yidu-private` |
+| `OSS_ENDPOINT` | Bucket endpoint without protocol | `oss-cn-hangzhou.aliyuncs.com` |
+| `OSS_OBJECT_PREFIX` | Temporary object prefix (optional) | `yidu-temp/` |
+
+For screenshot direct upload, grant the RAM user only `oss:PutObject` and
+`oss:GetObject` access to `<bucket>/yidu-temp/*`. Configure an OSS lifecycle
+rule to delete `yidu-temp/` objects after one day. Add the bucket host to the
+WeChat Mini Program `uploadFile` domain allowlist.
 
 ### For overseas deployment:
 ```
