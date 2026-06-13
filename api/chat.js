@@ -132,6 +132,7 @@ function normalizeClientMeta(value) {
     imageTransport: cleanMetaValue(value.imageTransport, 32),
     uploadFallbackCode: cleanMetaValue(value.uploadFallbackCode, 48),
     uploadFallbackDetail: cleanMetaValue(value.uploadFallbackDetail, 180),
+    task: value.task === "misread" ? "misread" : "",
   };
 }
 
@@ -165,6 +166,7 @@ function logRequest(level, data) {
     imageKeyCount: Array.isArray(body.imageKeys) ? body.imageKeys.length : 0,
     imageChars: images.reduce((sum, img) => sum + (typeof img === "string" ? img.length : 0), 0),
     imageTransport: body.clientMeta?.imageTransport || undefined,
+    task: body.clientMeta?.task || undefined,
     uploadFallbackCode: body.clientMeta?.uploadFallbackCode || undefined,
     uploadFallbackDetail: body.clientMeta?.uploadFallbackDetail || undefined,
     error: data.error || undefined,
@@ -202,6 +204,9 @@ async function callQwen(apiKey, body, baseUrl) {
   const model = body.images?.length > 0 || imageUrls.length > 0
     ? (process.env.AI_VISION_MODEL || "qwen3-vl-flash")
     : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
+  const enableThinking = body.clientMeta?.task === "misread" &&
+    body.images?.length === 0 &&
+    imageUrls.length === 0;
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
@@ -209,7 +214,7 @@ async function callQwen(apiKey, body, baseUrl) {
       model,
       max_tokens: MAX_OUTPUT_TOKENS,
       messages,
-      enable_thinking: false,
+      enable_thinking: enableThinking,
     }),
   });
   const data = await readJson(response);
