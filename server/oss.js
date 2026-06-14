@@ -1,9 +1,12 @@
 import crypto from "node:crypto";
+import { Buffer } from "node:buffer";
+import process from "node:process";
 
 const DEFAULT_PREFIX = "yidu-temp/";
 const DEFAULT_POLICY_TTL_SECONDS = 5 * 60;
 const DEFAULT_READ_TTL_SECONDS = 10 * 60;
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+const OSS_REQUEST_TIMEOUT_MS = 8 * 1000;
 
 export function getOssConfig() {
   const accessKeyId = process.env.OSS_ACCESS_KEY_ID || "";
@@ -84,6 +87,44 @@ export function signObjectReadUrl(config, key, ttlSeconds = DEFAULT_READ_TTL_SEC
     Signature: signature,
   });
   return `${config.host}/${encodeObjectKey(key)}?${query.toString()}`;
+}
+
+export async function putJsonObject(config, key, value) {
+  const body = Buffer.from(JSON.stringify(value), "utf8");
+  const contentType = "application/json; charset=utf-8";
+  const contentMd5 = crypto.createHash("md5").update(body).digest("base64");
+  const date = new Date().toUTCString();
+  const resource = `/${config.bucket}/${key}`;
+  const stringToSign = `PUT\n${contentMd5}\n${contentType}\n${date}\n${resource}`;
+  const signature = crypto
+    .createHmac("sha1", config.accessKeySecret)
+    .update(stringToSign)
+    .digest("base64");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OSS_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.host}/${encodeObjectKey(key)}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `OSS ${config.accessKeyId}:${signature}`,
+        "Content-MD5": contentMd5,
+        "Content-Type": contentType,
+        Date: date,
+      },
+      body,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`OSS write failed (${response.status}): ${detail.slice(0, 240)}`);
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") throw new Error("OSS write timed out", { cause: err });
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function normalizeEndpoint(value) {

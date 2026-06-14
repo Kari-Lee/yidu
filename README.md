@@ -68,7 +68,9 @@ src/
     ├── zh.json             # Chinese UI strings
     └── en.json             # English UI strings
 api/
-└── chat.js                 # Serverless: Qwen / Claude / OpenAI adapter
+├── chat.js                 # Serverless: Qwen / Claude / OpenAI adapter
+├── feedback.js             # Redacted copy/share feedback collector
+└── oss-policy.js           # Signed direct-upload policy
 ```
 
 ## Development
@@ -94,11 +96,18 @@ npm run dev
 | `OSS_BUCKET` | Private OSS bucket name | `yidu-private` |
 | `OSS_ENDPOINT` | Bucket endpoint without protocol | `oss-cn-hangzhou.aliyuncs.com` |
 | `OSS_OBJECT_PREFIX` | Temporary object prefix (optional) | `yidu-temp/` |
+| `OSS_FEEDBACK_PREFIX` | Long-lived redacted feedback prefix (optional) | `yidu-feedback/` |
+| `FEEDBACK_HASH_SECRET` | Secret used to hash duplicate source messages | `random-long-secret` |
 
 For screenshot direct upload, grant the RAM user only `oss:PutObject` and
 `oss:GetObject` access to `<bucket>/yidu-temp/*`. Configure an OSS lifecycle
 rule to delete `yidu-temp/` objects after one day. Add the bucket host to the
 WeChat Mini Program `uploadFile` domain allowlist.
+
+For the feedback flywheel, also grant `oss:PutObject` to
+`<bucket>/yidu-feedback/*`. Do not apply the temporary screenshot lifecycle
+rule to this prefix. The endpoint strips common phone numbers, email addresses,
+account IDs, URLs, mentions, and long numeric identifiers before persistence.
 
 ### For overseas deployment:
 ```
