@@ -201,20 +201,21 @@ async function callQwen(apiKey, body, baseUrl) {
     messages.push({ role: "user", content: body.message });
   }
 
-  const model = body.images?.length > 0 || imageUrls.length > 0
+  const hasImages = body.images?.length > 0 || imageUrls.length > 0;
+  const isMisread = body.clientMeta?.task === "misread";
+  const model = hasImages
     ? (process.env.AI_VISION_MODEL || "qwen3-vl-flash")
-    : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
-  const enableThinking = body.clientMeta?.task === "misread" &&
-    body.images?.length === 0 &&
-    imageUrls.length === 0;
+    : isMisread
+      ? (process.env.AI_MISREAD_MODEL || "qwen-plus")
+      : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
     body: JSON.stringify({
       model,
-      max_tokens: MAX_OUTPUT_TOKENS,
+      max_tokens: isMisread ? 750 : MAX_OUTPUT_TOKENS,
       messages,
-      enable_thinking: enableThinking,
+      enable_thinking: false,
     }),
   });
   const data = await readJson(response);
