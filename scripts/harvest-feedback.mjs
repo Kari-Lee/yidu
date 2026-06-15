@@ -7,7 +7,9 @@
  *
  * 用法（需要和线上同一套 OSS 只读/读写凭证）：
  *   OSS_ACCESS_KEY_ID=... OSS_ACCESS_KEY_SECRET=... OSS_BUCKET=... OSS_ENDPOINT=... \
- *   node scripts/harvest-feedback.mjs
+ *   node scripts/harvest-feedback.mjs            # 生成 feedback-gold.json + 打印 Top 5
+ *   node scripts/harvest-feedback.mjs --print    # 终端列出 Top 20 完整文本（不用开 json）
+ *   node scripts/harvest-feedback.mjs --print --top=50   # 自定义打印条数
  *
  * 可选 env：
  *   OSS_FEEDBACK_PREFIX   反馈前缀（默认 yidu-feedback/，需与 api/feedback.js 一致）
@@ -33,6 +35,13 @@ const MIN_COPIES = Number(process.env.FEEDBACK_MIN_COPIES || 1);
 const TOP_N = Number(process.env.FEEDBACK_TOP_N || 500);
 const OSS_TIMEOUT_MS = 10 * 1000;
 const CONCURRENCY = 8;
+const ARGS = process.argv.slice(2);
+const PRINT_EXTENDED = ARGS.includes("--print");
+const PRINT_TOP = (function () {
+  const a = ARGS.find((x) => x.startsWith("--top="));
+  if (a) return Math.max(1, Number(a.slice(6)) || 0);
+  return PRINT_EXTENDED ? 20 : 5;
+})();
 
 function normalizePrefix(value) {
   return String(value || "").replace(/^\/+/, "").replace(/\/+$/, "") + "/";
@@ -181,9 +190,13 @@ async function main() {
 
   console.log(`✅ 完成：${records.length} 条反馈 → ${groups.size} 个去重回复 → 入榜 ${gold.length} 条 → ${OUT}`);
   if (gold.length) {
-    console.log("\nTop 5：");
-    gold.slice(0, 5).forEach((g, i) => {
-      console.log(`  ${i + 1}. [复制${g.copyCount}·${g.distinctSources}人·${g.mode}] ${g.text.slice(0, 40)}`);
+    const shown = gold.slice(0, PRINT_TOP);
+    console.log(`\n金句榜 Top ${shown.length}（按复制数）：`);
+    shown.forEach((g, i) => {
+      const rank = String(i + 1).padStart(2, " ");
+      const head = `复制${g.copyCount}·${g.distinctSources}人·${g.mode}` + (g.routes[0] ? `·${g.routes[0]}` : "");
+      const body = PRINT_EXTENDED ? g.text : g.text.slice(0, 40);
+      console.log(`  ${rank}. [${head}] ${body}`);
     });
   }
 }
