@@ -70,6 +70,7 @@ src/
 api/
 ├── chat.js                 # Serverless: Qwen / Claude / OpenAI adapter
 ├── feedback.js             # Redacted serve/copy/rating feedback collector
+├── wxacode.js              # Cached WeChat Mini Program code image
 └── oss-policy.js           # Signed direct-upload policy
 ```
 
@@ -98,6 +99,8 @@ npm run dev
 | `OSS_OBJECT_PREFIX` | Temporary object prefix (optional) | `yidu-temp/` |
 | `OSS_FEEDBACK_PREFIX` | Long-lived redacted feedback prefix (optional) | `yidu-feedback/` |
 | `FEEDBACK_HASH_SECRET` | Secret used to hash duplicate source messages | `random-long-secret` |
+| `WECHAT_APP_ID` | Mini Program AppID used for share-card codes | `wxe6d3e0de52d068c2` |
+| `WECHAT_APP_SECRET` | Mini Program AppSecret, server-side only | `...` |
 
 For screenshot direct upload, grant the RAM user only `oss:PutObject` and
 `oss:GetObject` access to `<bucket>/yidu-temp/*`. Configure an OSS lifecycle
