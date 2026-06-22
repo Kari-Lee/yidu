@@ -1,8 +1,8 @@
 /**
- * 取库：把 OSS 里攒的「复制/分享反馈」聚合成一份金句榜。
+ * 取库：把 OSS 里攒的「展示/复制/评分反馈」聚合成一份金句榜。
  *
- * 链路上游：小程序复制/分享 → api/feedback.js → OSS  yidu-feedback/YYYYMMDD/{uuid}.json
- * 本脚本：列举该前缀 → 拉下所有 JSON → 按「mode + 回复文本」聚合 → 按复制数排序
+ * 链路上游：小程序展示/复制/评分 → api/feedback.js → OSS  yidu-feedback/YYYYMMDD/{uuid}.json
+ * 本脚本：列举该前缀 → 拉下所有 JSON → 按「mode + 回复文本」聚合 → 按质量分排序
  *         → 输出 feedback-gold.json（被真实用户验证过的金句，可人工审、可喂进语料库）。
  *
  * 用法（需要和线上同一套 OSS 只读/读写凭证）：
@@ -137,6 +137,12 @@ async function main() {
   const keys = await listKeys(config);
   console.log(`\n共 ${keys.length} 条反馈对象，开始拉取…`);
   const records = (await mapLimit(keys, CONCURRENCY, (k) => getRecord(config, k))).filter(Boolean);
+  const refreshedBatches = new Set(records
+    .filter((r) => r && r.event === "refresh" && r.batchId)
+    .map((r) => r.batchId));
+  const sharedBatches = new Set(records
+    .filter((r) => r && r.event === "share" && r.batchId)
+    .map((r) => r.batchId));
 
   const groups = new Map();
   for (const r of records) {
@@ -146,14 +152,24 @@ async function main() {
     let g = groups.get(gkey);
     if (!g) {
       g = {
-        mode, text: r.text, copyCount: 0, shareCount: 0,
+        mode, text: r.text, servedCount: 0, copyCount: 0, shareCount: 0,
+        positiveCount: 0, negativeCount: 0, refreshCount: 0,
+        reasons: new Map(),
         routes: new Set(), weapons: new Set(), sources: new Set(),
         exampleSource: r.source || "", firstSeen: r.receivedAt || "", lastSeen: r.receivedAt || ""
       };
       groups.set(gkey, g);
     }
-    if (r.event === "copy") g.copyCount += 1;
-    else if (r.event === "share") g.shareCount += 1;
+    if (r.event === "serve") {
+      g.servedCount += 1;
+      if (r.batchId && refreshedBatches.has(r.batchId)) g.refreshCount += 1;
+      if (r.batchId && sharedBatches.has(r.batchId)) g.shareCount += 1;
+    } else if (r.event === "copy") g.copyCount += 1;
+    else if (r.event === "rating" && r.verdict === "positive") g.positiveCount += 1;
+    else if (r.event === "rating" && r.verdict === "negative") g.negativeCount += 1;
+    if (r.event === "rating" && r.reason) {
+      g.reasons.set(r.reason, (g.reasons.get(r.reason) || 0) + 1);
+    }
     if (r.route) g.routes.add(r.route);
     if (r.weapon) g.weapons.add(r.weapon);
     if (r.sourceHash) g.sources.add(r.sourceHash);
@@ -162,21 +178,41 @@ async function main() {
     if (r.receivedAt && r.receivedAt > g.lastSeen) g.lastSeen = r.receivedAt;
   }
 
-  const gold = [...groups.values()]
-    .filter((g) => g.copyCount >= MIN_COPIES)
+  const entries = [...groups.values()]
     .map((g) => ({
       mode: g.mode,
       text: g.text,
+      servedCount: g.servedCount,
       copyCount: g.copyCount,
       shareCount: g.shareCount,
+      positiveCount: g.positiveCount,
+      negativeCount: g.negativeCount,
+      refreshCount: g.refreshCount,
+      copyRate: g.servedCount ? Number((g.copyCount / g.servedCount).toFixed(4)) : null,
+      approvalRate: g.positiveCount + g.negativeCount
+        ? Number((g.positiveCount / (g.positiveCount + g.negativeCount)).toFixed(4))
+        : null,
+      reasons: Object.fromEntries(g.reasons),
       distinctSources: g.sources.size,
       routes: [...g.routes],
       weapons: [...g.weapons],
       exampleSource: g.exampleSource,
       firstSeen: g.firstSeen,
       lastSeen: g.lastSeen,
-    }))
-    .sort((a, b) => b.copyCount - a.copyCount || b.distinctSources - a.distinctSources)
+    }));
+
+  const gold = entries
+    .filter((g) => g.copyCount >= MIN_COPIES || g.positiveCount > 0)
+    .sort((a, b) => {
+      const scoreA = a.copyCount * 3 + a.positiveCount * 2 - a.negativeCount - a.refreshCount * 0.25;
+      const scoreB = b.copyCount * 3 + b.positiveCount * 2 - b.negativeCount - b.refreshCount * 0.25;
+      return scoreB - scoreA || b.copyCount - a.copyCount || b.distinctSources - a.distinctSources;
+    })
+    .slice(0, TOP_N);
+
+  const needsReview = entries
+    .filter((g) => g.negativeCount > 0)
+    .sort((a, b) => b.negativeCount - a.negativeCount || b.refreshCount - a.refreshCount)
     .slice(0, TOP_N);
 
   mkdirSync(dirname(OUT), { recursive: true });
@@ -186,15 +222,16 @@ async function main() {
     totalGroups: groups.size,
     minCopies: MIN_COPIES,
     gold,
+    needsReview,
   }, null, 2) + "\n");
 
-  console.log(`✅ 完成：${records.length} 条反馈 → ${groups.size} 个去重回复 → 入榜 ${gold.length} 条 → ${OUT}`);
+  console.log(`✅ 完成：${records.length} 条反馈 → ${groups.size} 个去重回复 → 金句 ${gold.length} 条 / 待复盘 ${needsReview.length} 条 → ${OUT}`);
   if (gold.length) {
     const shown = gold.slice(0, PRINT_TOP);
-    console.log(`\n金句榜 Top ${shown.length}（按复制数）：`);
+    console.log(`\n金句榜 Top ${shown.length}（按综合质量分）：`);
     shown.forEach((g, i) => {
       const rank = String(i + 1).padStart(2, " ");
-      const head = `复制${g.copyCount}·${g.distinctSources}人·${g.mode}` + (g.routes[0] ? `·${g.routes[0]}` : "");
+      const head = `展示${g.servedCount}·复制${g.copyCount}·赞${g.positiveCount}·踩${g.negativeCount}·${g.mode}` + (g.routes[0] ? `·${g.routes[0]}` : "");
       const body = PRINT_EXTENDED ? g.text : g.text.slice(0, 40);
       console.log(`  ${rank}. [${head}] ${body}`);
     });

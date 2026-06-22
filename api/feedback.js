@@ -9,6 +9,14 @@ const MAX_BODY_BYTES = 12 * 1024;
 const MAX_SOURCE_CHARS = 1200;
 const MAX_REPLY_CHARS = 500;
 const FEEDBACK_PREFIX = "yidu-feedback/";
+const EVENTS = new Set(["serve", "copy", "share", "refresh", "rating"]);
+const RATING_REASONS = new Set([
+  "can_send",
+  "awkward",
+  "missed_context",
+  "too_offensive",
+  "wrong_mode",
+]);
 const rateBuckets = new Map();
 
 class HttpError extends Error {
@@ -53,13 +61,19 @@ export function createFeedbackRecord(body, now = new Date()) {
   const text = redactSensitiveText(clean.text, MAX_REPLY_CHARS);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: crypto.randomUUID(),
     event: clean.event,
     task: "misread",
     mode: clean.mode,
     route: clean.route,
     weapon: clean.weapon,
+    batchId: clean.batchId,
+    replyId: clean.replyId,
+    replyIndex: clean.replyIndex,
+    promptVersion: clean.promptVersion,
+    verdict: clean.verdict,
+    reason: clean.reason,
     source,
     sourceHash: source ? hashSource(source) : "",
     text,
@@ -73,7 +87,7 @@ export function validateFeedback(body) {
     throw new HttpError(400, "Invalid feedback payload");
   }
 
-  const event = body.event === "copy" || body.event === "share" ? body.event : "";
+  const event = typeof body.event === "string" && EVENTS.has(body.event) ? body.event : "";
   if (!event) throw new HttpError(400, "Invalid feedback event");
   if (body.task !== "misread") throw new HttpError(400, "Invalid feedback task");
 
@@ -82,8 +96,31 @@ export function validateFeedback(body) {
 
   const source = cleanText(body.source, MAX_SOURCE_CHARS);
   const text = cleanText(body.text, MAX_REPLY_CHARS);
-  if (event === "copy" && (!source || !text)) {
-    throw new HttpError(400, "Copy feedback requires source and text");
+  if (["serve", "copy", "rating"].includes(event) && (!source || !text)) {
+    throw new HttpError(400, `${event} feedback requires source and text`);
+  }
+
+  const batchId = cleanToken(body.batchId, 64);
+  const replyId = cleanToken(body.replyId, 72);
+  const replyIndex = normalizeReplyIndex(body.replyIndex);
+  const promptVersion = cleanToken(body.promptVersion, 48);
+  const verdict = body.verdict === "positive" || body.verdict === "negative" ? body.verdict : "";
+  const reason = typeof body.reason === "string" && RATING_REASONS.has(body.reason) ? body.reason : "";
+
+  if (["serve", "rating", "refresh"].includes(event) && !batchId) {
+    throw new HttpError(400, `${event} feedback requires batchId`);
+  }
+  if (["serve", "rating"].includes(event) && (!replyId || replyIndex === null)) {
+    throw new HttpError(400, `${event} feedback requires reply identity`);
+  }
+  if (event === "rating" && (!verdict || !reason)) {
+    throw new HttpError(400, "Rating feedback requires verdict and reason");
+  }
+  if (event === "rating" && verdict === "positive" && reason !== "can_send") {
+    throw new HttpError(400, "Positive rating requires can_send reason");
+  }
+  if (event === "rating" && verdict === "negative" && reason === "can_send") {
+    throw new HttpError(400, "Negative rating requires a rejection reason");
   }
 
   return {
@@ -91,6 +128,12 @@ export function validateFeedback(body) {
     mode,
     route: cleanToken(body.route, 48),
     weapon: cleanText(body.weapon, 40),
+    batchId,
+    replyId,
+    replyIndex,
+    promptVersion,
+    verdict,
+    reason,
     source,
     text,
     ts: normalizeTimestamp(body.ts),
@@ -134,6 +177,12 @@ function normalizeTimestamp(value) {
   const ts = Number(value);
   if (!Number.isFinite(ts) || ts <= 0) return null;
   return Math.floor(ts);
+}
+
+function normalizeReplyIndex(value) {
+  const index = Number(value);
+  if (!Number.isInteger(index) || index < 0 || index > 20) return null;
+  return index;
 }
 
 function hashSource(source) {

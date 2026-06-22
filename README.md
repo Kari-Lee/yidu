@@ -69,7 +69,7 @@ src/
     └── en.json             # English UI strings
 api/
 ├── chat.js                 # Serverless: Qwen / Claude / OpenAI adapter
-├── feedback.js             # Redacted copy/share feedback collector
+├── feedback.js             # Redacted serve/copy/rating feedback collector
 └── oss-policy.js           # Signed direct-upload policy
 ```
 

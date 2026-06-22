@@ -25,10 +25,81 @@ test("validates a copy event and normalizes optional fields", () => {
     mode: "crush",
     route: "crush_generalscript",
     weapon: "推拉",
+    batchId: "",
+    replyId: "",
+    replyIndex: null,
+    promptVersion: "",
+    verdict: "",
+    reason: "",
     source: "你在干嘛",
     text: "在等你的下一条工作指示。",
     ts: 123,
   });
+});
+
+test("validates a negative rating with reply identity", () => {
+  const value = validateFeedback({
+    event: "rating",
+    task: "misread",
+    mode: "person",
+    batchId: "batch_123",
+    replyId: "batch_123_1",
+    replyIndex: 1,
+    promptVersion: "misread_v2",
+    verdict: "negative",
+    reason: "awkward",
+    source: "今天打算做什么",
+    text: "先提交立项申请。",
+    ts: 456,
+  });
+
+  assert.equal(value.event, "rating");
+  assert.equal(value.batchId, "batch_123");
+  assert.equal(value.replyIndex, 1);
+  assert.equal(value.verdict, "negative");
+  assert.equal(value.reason, "awkward");
+});
+
+test("validates serve and refresh events for the same batch", () => {
+  const served = validateFeedback({
+    event: "serve",
+    task: "misread",
+    mode: "crush",
+    batchId: "batch_456",
+    replyId: "batch_456_0",
+    replyIndex: 0,
+    source: "在吗",
+    text: "在，正在走审批。",
+  });
+  const refreshed = validateFeedback({
+    event: "refresh",
+    task: "misread",
+    mode: "crush",
+    batchId: "batch_456",
+    source: "在吗",
+  });
+
+  assert.equal(served.replyIndex, 0);
+  assert.equal(refreshed.event, "refresh");
+  assert.equal(refreshed.batchId, "batch_456");
+});
+
+test("rejects a rating with an incompatible reason", () => {
+  assert.throws(
+    () => validateFeedback({
+      event: "rating",
+      task: "misread",
+      mode: "person",
+      batchId: "batch_123",
+      replyId: "batch_123_0",
+      replyIndex: 0,
+      verdict: "positive",
+      reason: "awkward",
+      source: "你好",
+      text: "你好",
+    }),
+    /can_send reason/,
+  );
 });
 
 test("rejects incomplete copy feedback", () => {
@@ -66,7 +137,7 @@ test("creates a persistence record without client-supplied extra fields", () => 
     ts: 1710000000000,
   }, new Date("2026-06-14T12:00:00.000Z"));
 
-  assert.equal(record.schemaVersion, 1);
+  assert.equal(record.schemaVersion, 2);
   assert.equal(record.event, "share");
   assert.equal(record.source, "联系我 [手机号]");
   assert.equal(record.receivedAt, "2026-06-14T12:00:00.000Z");
