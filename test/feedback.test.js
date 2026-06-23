@@ -22,6 +22,7 @@ test("validates a copy event and normalizes optional fields", () => {
 
   assert.deepEqual(value, {
     event: "copy",
+    task: "misread",
     mode: "crush",
     route: "crush_generalscript",
     weapon: "推拉",
@@ -31,6 +32,8 @@ test("validates a copy event and normalizes optional fields", () => {
     promptVersion: "",
     verdict: "",
     reason: "",
+    title: "",
+    summary: "",
     source: "你在干嘛",
     text: "在等你的下一条工作指示。",
     ts: 123,
@@ -114,6 +117,35 @@ test("rejects incomplete copy feedback", () => {
   );
 });
 
+test("validates generic tool engagement without misread mode", () => {
+  const value = validateFeedback({
+    event: "poster_save",
+    task: "predict",
+    title: "关系走向",
+    summary: "当前阶段：拉扯期",
+    source: "聊天记录里有手机号 13900001111",
+    text: "保存结果图",
+    ts: 789,
+  });
+
+  assert.equal(value.event, "poster_save");
+  assert.equal(value.task, "predict");
+  assert.equal(value.mode, "");
+  assert.equal(value.title, "关系走向");
+  assert.equal(value.summary, "当前阶段：拉扯期");
+});
+
+test("rejects non-misread generation feedback events", () => {
+  assert.throws(
+    () => validateFeedback({
+      event: "serve",
+      task: "predict",
+      title: "关系走向",
+    }),
+    /Invalid tool feedback event/,
+  );
+});
+
 test("redacts common personal identifiers", () => {
   const redacted = redactSensitiveText(
     "电话 13812345678，邮箱 hi@example.com，微信号: abc_12345，见 https://example.com/a，@张三",
@@ -137,8 +169,9 @@ test("creates a persistence record without client-supplied extra fields", () => 
     ts: 1710000000000,
   }, new Date("2026-06-14T12:00:00.000Z"));
 
-  assert.equal(record.schemaVersion, 2);
+  assert.equal(record.schemaVersion, 3);
   assert.equal(record.event, "share");
+  assert.equal(record.task, "misread");
   assert.equal(record.source, "联系我 [手机号]");
   assert.equal(record.receivedAt, "2026-06-14T12:00:00.000Z");
   assert.equal(record.admin, undefined);

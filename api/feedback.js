@@ -8,8 +8,12 @@ const RATE_LIMIT = 30;
 const MAX_BODY_BYTES = 12 * 1024;
 const MAX_SOURCE_CHARS = 1200;
 const MAX_REPLY_CHARS = 500;
+const MAX_TITLE_CHARS = 160;
+const MAX_SUMMARY_CHARS = 500;
 const FEEDBACK_PREFIX = "yidu-feedback/";
-const EVENTS = new Set(["serve", "copy", "share", "refresh", "rating"]);
+const EVENTS = new Set(["serve", "copy", "share", "refresh", "rating", "poster_save"]);
+const TASKS = new Set(["misread", "translate", "check", "reply", "diagnose", "predict", "quiz"]);
+const TOOL_EVENTS = new Set(["copy", "share", "poster_save"]);
 const RATING_REASONS = new Set([
   "can_send",
   "awkward",
@@ -59,12 +63,14 @@ export function createFeedbackRecord(body, now = new Date()) {
   const receivedAt = now.toISOString();
   const source = redactSensitiveText(clean.source, MAX_SOURCE_CHARS);
   const text = redactSensitiveText(clean.text, MAX_REPLY_CHARS);
+  const title = redactSensitiveText(clean.title, MAX_TITLE_CHARS);
+  const summary = redactSensitiveText(clean.summary, MAX_SUMMARY_CHARS);
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: crypto.randomUUID(),
     event: clean.event,
-    task: "misread",
+    task: clean.task,
     mode: clean.mode,
     route: clean.route,
     weapon: clean.weapon,
@@ -74,6 +80,8 @@ export function createFeedbackRecord(body, now = new Date()) {
     promptVersion: clean.promptVersion,
     verdict: clean.verdict,
     reason: clean.reason,
+    title,
+    summary,
     source,
     sourceHash: source ? hashSource(source) : "",
     text,
@@ -89,14 +97,23 @@ export function validateFeedback(body) {
 
   const event = typeof body.event === "string" && EVENTS.has(body.event) ? body.event : "";
   if (!event) throw new HttpError(400, "Invalid feedback event");
-  if (body.task !== "misread") throw new HttpError(400, "Invalid feedback task");
 
-  const mode = body.mode === "person" || body.mode === "crush" ? body.mode : "";
-  if (!mode) throw new HttpError(400, "Invalid feedback mode");
+  const task = typeof body.task === "string" && TASKS.has(body.task) ? body.task : "";
+  if (!task) throw new HttpError(400, "Invalid feedback task");
+  if (task !== "misread" && !TOOL_EVENTS.has(event)) {
+    throw new HttpError(400, "Invalid tool feedback event");
+  }
+
+  const mode = task === "misread"
+    ? (body.mode === "person" || body.mode === "crush" ? body.mode : "")
+    : cleanToken(body.mode, 32);
+  if (task === "misread" && event !== "poster_save" && !mode) {
+    throw new HttpError(400, "Invalid feedback mode");
+  }
 
   const source = cleanText(body.source, MAX_SOURCE_CHARS);
   const text = cleanText(body.text, MAX_REPLY_CHARS);
-  if (["serve", "copy", "rating"].includes(event) && (!source || !text)) {
+  if (task === "misread" && ["serve", "copy", "rating"].includes(event) && (!source || !text)) {
     throw new HttpError(400, `${event} feedback requires source and text`);
   }
 
@@ -107,24 +124,25 @@ export function validateFeedback(body) {
   const verdict = body.verdict === "positive" || body.verdict === "negative" ? body.verdict : "";
   const reason = typeof body.reason === "string" && RATING_REASONS.has(body.reason) ? body.reason : "";
 
-  if (["serve", "rating", "refresh"].includes(event) && !batchId) {
+  if (task === "misread" && ["serve", "rating", "refresh"].includes(event) && !batchId) {
     throw new HttpError(400, `${event} feedback requires batchId`);
   }
-  if (["serve", "rating"].includes(event) && (!replyId || replyIndex === null)) {
+  if (task === "misread" && ["serve", "rating"].includes(event) && (!replyId || replyIndex === null)) {
     throw new HttpError(400, `${event} feedback requires reply identity`);
   }
-  if (event === "rating" && (!verdict || !reason)) {
+  if (task === "misread" && event === "rating" && (!verdict || !reason)) {
     throw new HttpError(400, "Rating feedback requires verdict and reason");
   }
-  if (event === "rating" && verdict === "positive" && reason !== "can_send") {
+  if (task === "misread" && event === "rating" && verdict === "positive" && reason !== "can_send") {
     throw new HttpError(400, "Positive rating requires can_send reason");
   }
-  if (event === "rating" && verdict === "negative" && reason === "can_send") {
+  if (task === "misread" && event === "rating" && verdict === "negative" && reason === "can_send") {
     throw new HttpError(400, "Negative rating requires a rejection reason");
   }
 
   return {
     event,
+    task,
     mode,
     route: cleanToken(body.route, 48),
     weapon: cleanText(body.weapon, 40),
@@ -134,6 +152,8 @@ export function validateFeedback(body) {
     promptVersion,
     verdict,
     reason,
+    title: cleanText(body.title, MAX_TITLE_CHARS),
+    summary: cleanText(body.summary, MAX_SUMMARY_CHARS),
     source,
     text,
     ts: normalizeTimestamp(body.ts),
