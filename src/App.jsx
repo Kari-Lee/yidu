@@ -12,6 +12,7 @@ import Bazi from "./pages/Bazi";
 import Fortune from "./pages/Fortune";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import FeedbackDashboard from "./pages/FeedbackDashboard";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="bazi" element={<Bazi />} />
           <Route path="fortune" element={<Fortune />} />
           <Route path="privacy" element={<Privacy />} />
+          <Route path="admin/feedback" element={<FeedbackDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

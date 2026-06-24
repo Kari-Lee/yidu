@@ -3,6 +3,9 @@
   "functions": {
     "api/chat.js": {
       "maxDuration": 120
+    },
+    "api/feedback-summary.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
