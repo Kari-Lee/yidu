@@ -136,6 +136,7 @@ export function summarizeFeedbackRecords(records, meta = {}) {
       days: meta.days || 14,
       limit: meta.limit || 5000,
       scannedObjects: meta.scannedObjects || cleanRecords.length,
+      storage: meta.storage || "unknown",
     },
     totals,
     byTask: [...byTask.values()].sort((a, b) => b.engagement - a.engagement || b.total - a.total),

@@ -1,9 +1,11 @@
 import { getOssConfig } from "../server/oss.js";
+import { getSupabaseConfig, listFeedbackRecords } from "../server/supabase.js";
 import {
   FeedbackSummaryError,
   loadFeedbackRecords,
   normalizeSummaryQuery,
   requireFeedbackAdmin,
+  summarizeFeedbackRecords,
 } from "../server/feedback-summary.js";
 
 export default async function handler(req, res) {
@@ -17,9 +19,21 @@ export default async function handler(req, res) {
 
   try {
     requireFeedbackAdmin(req);
+    const query = normalizeSummaryQuery(req.query || {});
+    const supabaseConfig = getSupabaseConfig();
+    if (supabaseConfig) {
+      const records = await listFeedbackRecords(supabaseConfig, query);
+      const summary = summarizeFeedbackRecords(records, {
+        ...query,
+        scannedObjects: records.length,
+        storage: "supabase",
+      });
+      return res.status(200).json(summary);
+    }
+
     const config = getOssConfig();
-    if (!config) throw new FeedbackSummaryError(503, "OSS is not configured");
-    const summary = await loadFeedbackRecords(config, normalizeSummaryQuery(req.query || {}));
+    if (!config) throw new FeedbackSummaryError(503, "Feedback storage is not configured");
+    const summary = await loadFeedbackRecords(config, { ...query, storage: "oss" });
     return res.status(200).json(summary);
   } catch (err) {
     console.warn("[feedback-summary]", JSON.stringify({

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
 import process from "node:process";
 import { getOssConfig, putJsonObject } from "../server/oss.js";
+import { getSupabaseConfig, insertFeedbackRecord } from "../server/supabase.js";
 
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 30;
@@ -42,12 +43,19 @@ export default async function handler(req, res) {
   try {
     enforceBodySize(req);
     enforceRateLimit(getClientIp(req));
-    const config = getOssConfig();
-    if (!config) throw new HttpError(503, "Feedback storage is not configured");
-
     const record = createFeedbackRecord(req.body || {});
-    const key = createObjectKey(record.id, record.receivedAt);
-    await putJsonObject(config, key, record);
+    const supabaseConfig = getSupabaseConfig();
+    const ossConfig = getOssConfig();
+    if (!supabaseConfig && !ossConfig) throw new HttpError(503, "Feedback storage is not configured");
+
+    if (supabaseConfig) {
+      await insertFeedbackRecord(supabaseConfig, record);
+      if (ossConfig && process.env.FEEDBACK_OSS_BACKUP === "1") {
+        writeOssBackup(ossConfig, record);
+      }
+    } else {
+      await writeOssRecord(ossConfig, record);
+    }
     return res.status(202).json({ ok: true });
   } catch (err) {
     console.warn("[feedback]", JSON.stringify({
@@ -56,6 +64,19 @@ export default async function handler(req, res) {
     }));
     return res.status(err.status || 500).json({ error: err.message || "Internal error" });
   }
+}
+
+async function writeOssRecord(config, record) {
+  const key = createObjectKey(record.id, record.receivedAt);
+  await putJsonObject(config, key, record);
+}
+
+function writeOssBackup(config, record) {
+  writeOssRecord(config, record).catch((err) => {
+    console.warn("[feedback-oss-backup]", JSON.stringify({
+      error: String(err.message || "OSS backup failed").slice(0, 300),
+    }));
+  });
 }
 
 export function createFeedbackRecord(body, now = new Date()) {

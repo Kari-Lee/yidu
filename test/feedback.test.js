@@ -187,9 +187,15 @@ test("accepts a feedback request and persists it through OSS", async () => {
     OSS_BUCKET: process.env.OSS_BUCKET,
     OSS_ENDPOINT: process.env.OSS_ENDPOINT,
     OSS_FEEDBACK_PREFIX: process.env.OSS_FEEDBACK_PREFIX,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_FEEDBACK_TABLE: process.env.SUPABASE_FEEDBACK_TABLE,
   };
   let uploadedUrl = "";
 
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.SUPABASE_FEEDBACK_TABLE;
   Object.assign(process.env, {
     OSS_ACCESS_KEY_ID: "test-id",
     OSS_ACCESS_KEY_SECRET: "test-secret",
@@ -227,6 +233,69 @@ test("accepts a feedback request and persists it through OSS", async () => {
   assert.equal(response.statusCode, 202);
   assert.deepEqual(response.body, { ok: true });
   assert.match(uploadedUrl, /\/test-feedback\/\d{8}\/[0-9a-f-]{36}\.json$/);
+});
+
+test("accepts a feedback request and persists it through Supabase first", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = {
+    OSS_ACCESS_KEY_ID: process.env.OSS_ACCESS_KEY_ID,
+    OSS_ACCESS_KEY_SECRET: process.env.OSS_ACCESS_KEY_SECRET,
+    OSS_BUCKET: process.env.OSS_BUCKET,
+    OSS_ENDPOINT: process.env.OSS_ENDPOINT,
+    FEEDBACK_OSS_BACKUP: process.env.FEEDBACK_OSS_BACKUP,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_FEEDBACK_TABLE: process.env.SUPABASE_FEEDBACK_TABLE,
+  };
+  let supabaseBody = null;
+  let ossBackupAttempted = false;
+
+  Object.assign(process.env, {
+    OSS_ACCESS_KEY_ID: "test-id",
+    OSS_ACCESS_KEY_SECRET: "test-secret",
+    OSS_BUCKET: "wrong-bucket",
+    OSS_ENDPOINT: "oss-cn-hangzhou.aliyuncs.com",
+    FEEDBACK_OSS_BACKUP: "",
+    SUPABASE_URL: "https://project.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "service-key",
+    SUPABASE_FEEDBACK_TABLE: "yidu_feedback_events",
+  });
+  globalThis.fetch = async (url, options) => {
+    if (String(url).includes("supabase.co")) {
+      supabaseBody = JSON.parse(options.body);
+      return new Response("", { status: 201 });
+    }
+    ossBackupAttempted = true;
+    return new Response("bucket mismatch", { status: 403 });
+  };
+
+  const response = createMockResponse();
+  try {
+    await feedbackHandler({
+      method: "POST",
+      headers: {},
+      socket: { remoteAddress: "127.0.0.1" },
+      body: {
+        event: "poster_save",
+        task: "predict",
+        title: "暧昧期",
+        summary: "关系进入拉扯期",
+        text: "结果图",
+        ts: Date.now(),
+      },
+    }, response);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+
+  assert.equal(response.statusCode, 202);
+  assert.deepEqual(response.body, { ok: true });
+  assert.equal(supabaseBody.task, "predict");
+  assert.equal(supabaseBody.event, "poster_save");
+  assert.equal(supabaseBody.title, "暧昧期");
+  assert.equal(ossBackupAttempted, false);
 });
 
 function createMockResponse() {
