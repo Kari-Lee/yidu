@@ -26,3 +26,10 @@ dist-ssr
 
 # Harvested feedback output (transient)
 feedback-gold.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
