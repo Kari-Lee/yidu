@@ -88,9 +88,14 @@ npm run dev
 | `QWEN_API_KEY` | DashScope API key (recommended for Qwen) | `sk-...` |
 | `ANTHROPIC_API_KEY` | Claude API key or legacy provider key | `sk-...` |
 | `API_BASE_URL` | Custom API endpoint (optional) | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `AI_TEXT_MODEL` | Text analysis model override (optional) | `qwen3-vl-plus-2025-09-23` |
+| `AI_TEXT_MODEL` | Text analysis model override (optional). Use a text model, not a VL model, for normal chat tasks. | `qwen-plus` |
+| `AI_FAST_TEXT_MODEL` | Fast text model fallback for lightweight tasks (optional) | `qwen-plus` |
+| `AI_MISREAD_MODEL` | Fast model for 已读乱回 and review tasks (optional) | `qwen-plus` |
 | `AI_VISION_MODEL` | Screenshot analysis model override (optional) | `qwen3-vl-flash` |
-| `AI_MODEL` | Legacy model override for text requests | `qwen3-vl-plus-2025-09-23` |
+| `AI_FAST_TIMEOUT_MS` | Timeout for lightweight text tasks (optional) | `45000` |
+| `AI_TEXT_TIMEOUT_MS` | Timeout for deeper text analysis tasks (optional) | `60000` |
+| `AI_VISION_TIMEOUT_MS` | Timeout for screenshot analysis tasks (optional) | `75000` |
+| `AI_MODEL` | Legacy provider model override for Claude/OpenAI only | `gpt-4o` |
 | `OSS_ACCESS_KEY_ID` | RAM user AccessKey ID for temporary screenshot objects | `LTAI...` |
 | `OSS_ACCESS_KEY_SECRET` | RAM user AccessKey Secret | `...` |
 | `OSS_BUCKET` | Private OSS bucket name | `yidu-private` |
@@ -103,6 +108,10 @@ For screenshot direct upload, grant the RAM user only `oss:PutObject` and
 `oss:GetObject` access to `<bucket>/yidu-temp/*`. Configure an OSS lifecycle
 rule to delete `yidu-temp/` objects after one day. Add the bucket host to the
 WeChat Mini Program `uploadFile` domain allowlist.
+
+For Qwen production speed, keep normal text tasks on `qwen-plus` or another
+text-only model. Screenshot tasks use `AI_VISION_MODEL`; setting
+`AI_TEXT_MODEL` to a VL model will make non-image features feel much slower.
 
 For the feedback flywheel, also grant `oss:PutObject` to
 `<bucket>/yidu-feedback/*`. Do not apply the temporary screenshot lifecycle

@@ -7,9 +7,10 @@ const MAX_SYSTEM_CHARS = 6000;
 const MAX_IMAGES = 12;
 const MAX_IMAGE_BASE64_CHARS = 2 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BASE64_CHARS = 3.9 * 1024 * 1024;
-const UPSTREAM_TIMEOUT_MS = 100 * 1000;
 const MAX_OUTPUT_TOKENS = 1100;
 const VISION_MAX_PIXELS = 1600 * 960;
+const DEFAULT_TEXT_TIMEOUT_MS = 45 * 1000;
+const DEFAULT_VISION_TIMEOUT_MS = 75 * 1000;
 const rateBuckets = new Map();
 
 class HttpError extends Error {
@@ -38,15 +39,22 @@ export default async function handler(req, res) {
     const body = validateBody(req.body || {});
     let text = "";
 
+    let upstreamMeta = {};
     if (provider === "claude") {
-      text = await callClaude(apiKey, body);
+      const result = await callClaude(apiKey, body);
+      text = result.text;
+      upstreamMeta = result.meta;
     } else if (provider === "openai") {
-      text = await callOpenAI(apiKey, body, process.env.API_BASE_URL || "https://api.openai.com/v1");
+      const result = await callOpenAI(apiKey, body, process.env.API_BASE_URL || "https://api.openai.com/v1");
+      text = result.text;
+      upstreamMeta = result.meta;
     } else {
-      text = await callQwen(apiKey, body, process.env.API_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1");
+      const result = await callQwen(apiKey, body, process.env.API_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1");
+      text = result.text;
+      upstreamMeta = result.meta;
     }
 
-    logRequest("ok", { ip, provider, body, startedAt });
+    logRequest("ok", { ip, provider, body, startedAt, upstreamMeta });
     return res.status(200).json({ text });
   } catch (err) {
     const status = err.status || 500;
@@ -132,8 +140,22 @@ function normalizeClientMeta(value) {
     imageTransport: cleanMetaValue(value.imageTransport, 32),
     uploadFallbackCode: cleanMetaValue(value.uploadFallbackCode, 48),
     uploadFallbackDetail: cleanMetaValue(value.uploadFallbackDetail, 180),
-    task: value.task === "misread" ? "misread" : "",
+    task: normalizeTask(value.task),
   };
+}
+
+function normalizeTask(value) {
+  if (typeof value !== "string") return "";
+  const task = value.replace(/[^a-z-]/g, "").slice(0, 32);
+  return [
+    "misread",
+    "misread-review",
+    "translate",
+    "check",
+    "reply",
+    "predict",
+    "diagnose",
+  ].includes(task) ? task : "";
 }
 
 function cleanMetaValue(value, maxLength) {
@@ -167,6 +189,8 @@ function logRequest(level, data) {
     imageChars: images.reduce((sum, img) => sum + (typeof img === "string" ? img.length : 0), 0),
     imageTransport: body.clientMeta?.imageTransport || undefined,
     task: body.clientMeta?.task || undefined,
+    model: data.upstreamMeta?.model || undefined,
+    upstreamTimeoutMs: data.upstreamMeta?.timeoutMs || undefined,
     uploadFallbackCode: body.clientMeta?.uploadFallbackCode || undefined,
     uploadFallbackDetail: body.clientMeta?.uploadFallbackDetail || undefined,
     error: data.error || undefined,
@@ -202,25 +226,73 @@ async function callQwen(apiKey, body, baseUrl) {
   }
 
   const hasImages = body.images?.length > 0 || imageUrls.length > 0;
-  const isMisread = body.clientMeta?.task === "misread";
-  const model = hasImages
-    ? (process.env.AI_VISION_MODEL || "qwen3-vl-flash")
-    : isMisread
-      ? (process.env.AI_MISREAD_MODEL || "qwen-plus")
-      : (process.env.AI_TEXT_MODEL || process.env.AI_MODEL || "qwen3-vl-plus-2025-09-23");
+  const runtime = getQwenRuntime(body, hasImages);
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
     body: JSON.stringify({
-      model,
-      max_tokens: isMisread ? 750 : MAX_OUTPUT_TOKENS,
+      model: runtime.model,
+      max_tokens: runtime.maxTokens,
       messages,
       enable_thinking: false,
     }),
-  });
+  }, runtime.timeoutMs);
   const data = await readJson(response);
   if (!response.ok) throw upstreamError(response.status, data);
-  return data.choices?.[0]?.message?.content || "";
+  return {
+    text: data.choices?.[0]?.message?.content || "",
+    meta: { model: runtime.model, timeoutMs: runtime.timeoutMs },
+  };
+}
+
+function getQwenRuntime(body, hasImages) {
+  const task = body.clientMeta?.task || inferTask(body.system);
+  if (hasImages) {
+    return {
+      model: process.env.AI_VISION_MODEL || "qwen3-vl-flash",
+      maxTokens: tokenLimitForTask(task),
+      timeoutMs: envInt("AI_VISION_TIMEOUT_MS", DEFAULT_VISION_TIMEOUT_MS),
+    };
+  }
+
+  const model = task === "misread" || task === "misread-review"
+    ? (process.env.AI_MISREAD_MODEL || process.env.AI_FAST_TEXT_MODEL || process.env.AI_TEXT_MODEL || "qwen-plus")
+    : (process.env.AI_TEXT_MODEL || process.env.AI_FAST_TEXT_MODEL || "qwen-plus");
+  return {
+    model,
+    maxTokens: tokenLimitForTask(task),
+    timeoutMs: timeoutForTask(task),
+  };
+}
+
+function inferTask(system) {
+  const text = typeof system === "string" ? system : "";
+  if (/已读乱回|回复生成器|终审/.test(text)) return "misread";
+  if (/潜台词|翻译成人话/.test(text)) return "translate";
+  if (/消息检测|该不该发|发送风险/.test(text)) return "check";
+  if (/回复建议|下一句/.test(text)) return "reply";
+  if (/感情预测|关系走向/.test(text)) return "predict";
+  if (/依恋|双方|互动模式/.test(text)) return "diagnose";
+  return "";
+}
+
+function tokenLimitForTask(task) {
+  if (task === "misread" || task === "misread-review") return envInt("AI_MISREAD_MAX_TOKENS", 760);
+  if (task === "translate" || task === "check" || task === "reply") return envInt("AI_FAST_MAX_TOKENS", 850);
+  if (task === "predict" || task === "diagnose") return envInt("AI_ANALYSIS_MAX_TOKENS", 1000);
+  return envInt("AI_MAX_OUTPUT_TOKENS", MAX_OUTPUT_TOKENS);
+}
+
+function timeoutForTask(task) {
+  if (task === "misread" || task === "misread-review" || task === "translate" || task === "check" || task === "reply") {
+    return envInt("AI_FAST_TIMEOUT_MS", DEFAULT_TEXT_TIMEOUT_MS);
+  }
+  return envInt("AI_TEXT_TIMEOUT_MS", 60 * 1000);
+}
+
+function envInt(name, fallback) {
+  const value = parseInt(process.env[name] || "", 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 async function callClaude(apiKey, body) {
@@ -236,6 +308,8 @@ async function callClaude(apiKey, body) {
     messages.push({ role: "user", content: body.message });
   }
 
+  const model = process.env.AI_MODEL || "claude-sonnet-4-20250514";
+  const timeoutMs = envInt("AI_TEXT_TIMEOUT_MS", 60 * 1000);
   const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -244,15 +318,18 @@ async function callClaude(apiKey, body) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: process.env.AI_MODEL || "claude-sonnet-4-20250514",
+      model,
       max_tokens: MAX_OUTPUT_TOKENS,
       system: body.system || "",
       messages,
     }),
-  });
+  }, timeoutMs);
   const data = await readJson(response);
   if (!response.ok) throw upstreamError(response.status, data);
-  return data.content?.map((c) => c.text || "").join("") || "";
+  return {
+    text: data.content?.map((c) => c.text || "").join("") || "",
+    meta: { model, timeoutMs },
+  };
 }
 
 async function callOpenAI(apiKey, body, baseUrl) {
@@ -268,14 +345,19 @@ async function callOpenAI(apiKey, body, baseUrl) {
     messages.push({ role: "user", content: body.message });
   }
 
+  const model = process.env.AI_MODEL || "gpt-4o";
+  const timeoutMs = envInt("AI_TEXT_TIMEOUT_MS", 60 * 1000);
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-    body: JSON.stringify({ model: process.env.AI_MODEL || "gpt-4o", max_tokens: MAX_OUTPUT_TOKENS, messages }),
-  });
+    body: JSON.stringify({ model, max_tokens: MAX_OUTPUT_TOKENS, messages }),
+  }, timeoutMs);
   const data = await readJson(response);
   if (!response.ok) throw upstreamError(response.status, data);
-  return data.choices?.[0]?.message?.content || "";
+  return {
+    text: data.choices?.[0]?.message?.content || "",
+    meta: { model, timeoutMs },
+  };
 }
 
 function getSignedImageUrls(body) {
@@ -285,9 +367,9 @@ function getSignedImageUrls(body) {
   return body.imageKeys.map((key) => signObjectReadUrl(config, key));
 }
 
-async function fetchWithTimeout(url, options) {
+async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
